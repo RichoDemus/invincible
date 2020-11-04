@@ -1,5 +1,4 @@
 use quicksilver::blinds::event::MouseButton::Left;
-use quicksilver::geom::{Circle, Rectangle};
 use quicksilver::graphics::VectorFont;
 use quicksilver::input::{Event, Key, ScrollDelta};
 use quicksilver::{
@@ -9,7 +8,9 @@ use quicksilver::{
 use crate::core::Core;
 use crate::util::convert;
 
+mod components;
 mod core;
+mod draw;
 mod util;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
@@ -21,14 +22,14 @@ pub(crate) const UPS: f32 = 200.;
 
 pub(crate) const WIDTH: f32 = 800.0;
 pub(crate) const HEIGHT: f32 = 600.0;
-#[cfg(debug_assertions)]
-pub(crate) const NUM_BODIES: i32 = 5;
-#[cfg(not(debug_assertions))]
-pub(crate) const NUM_BODIES: i32 = 100;
-pub(crate) const BODY_INITIAL_MASS_MAX: f64 = 50.;
-pub(crate) const INITIAL_SPEED: i32 = 50;
-pub(crate) const SUN_SIZE: f64 = 1000.;
-pub(crate) const GRAVITATIONAL_CONSTANT: f64 = 5.;
+// #[cfg(debug_assertions)]
+// pub(crate) const NUM_BODIES: i32 = 5;
+// #[cfg(not(debug_assertions))]
+// pub(crate) const NUM_BODIES: i32 = 100;
+// pub(crate) const BODY_INITIAL_MASS_MAX: f64 = 50.;
+// pub(crate) const INITIAL_SPEED: i32 = 50;
+// pub(crate) const SUN_SIZE: f64 = 1000.;
+// pub(crate) const GRAVITATIONAL_CONSTANT: f64 = 5.;
 
 fn main() {
     run(
@@ -110,6 +111,8 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
         // Instead it is better to drop/skip the lost frames
         if draw_timer.exhaust().is_some() {
             gfx.clear(Color::BLACK);
+
+            draw::draw(&mut gfx, &core.world, zoom_scale, &mut font);
 
             // let (drawables, predicted_orbit) = core.draw();
             // let num_bodies = drawables.len();
