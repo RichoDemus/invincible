@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use std::ops::Not;
 
 use itertools::Itertools;
-use legion::prelude::*;
+use legion::*;
 use nalgebra::{Isometry2, Point, Point2, Vector2};
 use ncollide2d::query::{self, PointQuery, Proximity};
 use ncollide2d::shape::Ball;
@@ -14,58 +14,6 @@ use crate::{
     WIDTH,
 };
 
-// Define our entity data types
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Position {
-    point: Point2<f64>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct MyVector2 {
-    x: f64,
-    y: f64,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Velocity {
-    vector: Vector2<f64>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Dimensions {
-    radius: f64,
-    mass: f64,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Default)]
-struct MetaInfo {
-    selected: bool,
-}
-
-impl Dimensions {
-    fn from_mass(mass: f64) -> Dimensions {
-        let radius: f64 = mass / (4. / 3. * PI);
-        let radius = radius.cbrt();
-        Dimensions { mass, radius }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-struct Data {
-    name: String,
-    sun: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-struct Id {
-    id: i32,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Model(usize);
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Static;
 
 pub(crate) struct Core {
     world: World,
@@ -75,8 +23,7 @@ pub(crate) struct Core {
 
 impl Core {
     pub(crate) fn new() -> Core {
-        let universe = Universe::new();
-        let world = universe.create_world();
+        let world = World::default();
         Core {
             world,
             paused: false,
