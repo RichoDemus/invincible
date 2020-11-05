@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use quicksilver::blinds::event::MouseButton::Left;
 use quicksilver::graphics::VectorFont;
 use quicksilver::input::{Event, Key, ScrollDelta};
@@ -11,6 +14,8 @@ use crate::util::convert;
 mod components;
 mod core;
 mod draw;
+mod market_calculations;
+mod ship_components;
 mod util;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
@@ -22,14 +27,6 @@ pub(crate) const UPS: f32 = 200.;
 
 pub(crate) const WIDTH: f32 = 800.0;
 pub(crate) const HEIGHT: f32 = 600.0;
-// #[cfg(debug_assertions)]
-// pub(crate) const NUM_BODIES: i32 = 5;
-// #[cfg(not(debug_assertions))]
-// pub(crate) const NUM_BODIES: i32 = 100;
-// pub(crate) const BODY_INITIAL_MASS_MAX: f64 = 50.;
-// pub(crate) const INITIAL_SPEED: i32 = 50;
-// pub(crate) const SUN_SIZE: f64 = 1000.;
-// pub(crate) const GRAVITATIONAL_CONSTANT: f64 = 5.;
 
 fn main() {
     run(
@@ -58,6 +55,7 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
     let mut update_timer = Timer::time_per_second(UPS);
     let mut draw_timer = Timer::time_per_second(FPS);
     let mut fps_timer = Timer::time_per_second(1.);
+    let mut day_tick_timer = Timer::time_per_second(1.);
 
     let ttf = VectorFont::from_slice(include_bytes!("BebasNeue-Regular.ttf"));
     let mut font = ttf.to_renderer(&gfx, 30.0)?;
@@ -104,6 +102,10 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
         // We use a while loop rather than an if so that we can try to catch up in the event of having a slow down.
         while update_timer.tick() {
             core.tick(dt, camera_x_axis, camera_y_axis);
+        }
+
+        while day_tick_timer.tick() {
+            core.tick_day();
         }
 
         // Unlike the update cycle drawing doesn't change our state

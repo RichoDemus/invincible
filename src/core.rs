@@ -1,3 +1,5 @@
+use std::cmp::{max, min};
+use std::collections::HashMap;
 use std::ops::Not;
 
 use itertools::Itertools;
@@ -8,9 +10,12 @@ use ncollide2d::shape::Ball;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 
+use crate::components::Resource::{Food, Water};
 use crate::components::{
-    Name, NaturalResources, Planet, Position, Resource, Selectable, Selected, Shape, Stockpiles,
+    Id, Name, NaturalResources, Planet, Population, Position, Resource, Selectable, Selected,
+    Shape, Stockpiles,
 };
+use crate::ship_components::Ship;
 use crate::{HEIGHT, WIDTH};
 
 pub(crate) struct Core {
@@ -60,7 +65,10 @@ impl Core {
             let x = rng.gen_range(0., WIDTH as f64);
             let y = rng.gen_range(0., HEIGHT as f64);
             let name = names.pop().expect("no more planet names");
+            let mut stockpiles = HashMap::new();
+            stockpiles.insert(Food, 1000);
             (
+                Id::default(),
                 Name {
                     name: String::from(name),
                 },
@@ -68,11 +76,14 @@ impl Core {
                 Position {
                     point: Point2::new(x, y),
                 },
-                Stockpiles::default(),
+                Stockpiles { stockpiles },
                 Shape {
                     shape: Ball::new(10.),
                 },
                 Selectable,
+                Population {
+                    population: rng.gen_range(1, 10),
+                },
             )
         }));
 
@@ -108,37 +119,63 @@ impl Core {
 
             // panic!(format!("There are {} planets and {} natural resources", planets, natural_resources))
         }
+
+        // add ships
+        self.world.extend((0..1).map(|_| {
+            (
+                Id::default(),
+                Ship,
+                Name {
+                    name: String::from("Wayfarer"),
+                },
+                Position {
+                    point: Point2::new(200., 200.),
+                },
+                Shape {
+                    shape: Ball::new(2.),
+                },
+                Selectable,
+            )
+        }));
     }
 
-    pub(crate) fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {
+    pub fn tick_day(&mut self) {
         <(&NaturalResources, &mut Stockpiles)>::query().for_each_mut(
             &mut self.world,
             |(natural_resources, stockpiles): (&NaturalResources, &mut Stockpiles)| {
-                let has_resource = stockpiles
-                    .stockpiles
-                    .iter()
-                    .any(|(resource, _)| resource == &natural_resources.resource);
-                if !has_resource {
-                    stockpiles
-                        .stockpiles
-                        .push((natural_resources.resource.clone(), 0));
-                }
+                let produced_resource = match &natural_resources.resource {
+                    Water => Food,
+                    other => panic!(format!("Unhandled natural resource: {:?}", other)),
+                };
 
-                stockpiles.stockpiles = stockpiles
+                let current_stockpile =
+                    *stockpiles.stockpiles.get(&produced_resource).unwrap_or(&0);
+                let new_stockpile = min(1000, current_stockpile + 10);
+                stockpiles
                     .stockpiles
-                    .clone()
-                    .into_iter()
-                    .map(|(resource, amount)| {
-                        if resource == natural_resources.resource {
-                            (resource, amount + 1)
-                        } else {
-                            (resource, amount)
-                        }
-                    })
-                    .collect();
+                    .insert(produced_resource, new_stockpile);
+            },
+        );
+
+        <(&mut Stockpiles, &mut Population)>::query().for_each_mut(
+            &mut self.world,
+            |(stockpiles, population): (&mut Stockpiles, &mut Population)| {
+                let current_food = *stockpiles.stockpiles.get(&Food).unwrap_or(&0);
+                if current_food < 1 {
+                    //starvation
+                    population.population = population.population.saturating_sub(1);
+                } else {
+                    let new_food = max(0, current_food.saturating_sub(population.population));
+                    *stockpiles
+                        .stockpiles
+                        .get_mut(&Food)
+                        .expect("There should be food here") = new_food;
+                }
             },
         );
     }
+
+    pub(crate) fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {}
 
     pub(crate) fn click(&mut self, click_position: Vector2<f64>) {
         let mut query = <(&Position, &Shape)>::query().filter(component::<Selectable>());
