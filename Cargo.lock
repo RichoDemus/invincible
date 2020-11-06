@@ -842,7 +842,6 @@ dependencies = [
  "libc",
  "stdweb",
  "wasi 0.9.0+wasi-snapshot-preview1",
- "wasm-bindgen",
 ]
 
 [[package]]

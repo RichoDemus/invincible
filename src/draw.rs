@@ -1,23 +1,30 @@
+use std::collections::HashMap;
+
 use legion::{component, IntoQuery, World};
 use quicksilver::geom::{Circle, Rectangle, Vector};
 use quicksilver::graphics::{Color, FontRenderer};
 use quicksilver::Graphics;
+use uuid::Uuid;
 
+use crate::components::Resource::Hydrogen;
 use crate::components::Resource::Water;
 use crate::components::{
-    Name, NaturalResources, Planet, Population, Position, Selected, Shape, Stockpiles,
+    Id, Name, NaturalResources, Planet, Population, Position, Selected, Shape, Stockpiles,
 };
-use crate::ship_components::Ship;
+use crate::economy_components::Market;
+use crate::ship_components::{Ship, ShipObjective};
 
 lazy_static! {
     static ref NAME_OFFSET: Vector = Vector::new(-20., 60.);
 }
 
-pub(crate) fn draw(gfx: &mut Graphics, world: &World, zoom_scale: f32, font: &mut FontRenderer) {
+pub fn draw(gfx: &mut Graphics, world: &World, zoom_scale: f32, font: &mut FontRenderer) {
     draw_planets_with_natural_resources(gfx, world, zoom_scale);
-    draw_planets_without_natural_resources(gfx, world, zoom_scale, font);
+    draw_planets_without_natural_resources(gfx, world, zoom_scale);
     draw_ships(gfx, world, zoom_scale);
     draw_selected_markers(gfx, world, zoom_scale);
+    draw_selected_planet_info(gfx, world, font);
+    draw_selected_ship_info(gfx, world, font);
 }
 
 fn draw_planets_with_natural_resources(gfx: &mut Graphics, world: &World, zoom_scale: f32) {
@@ -37,22 +44,17 @@ fn draw_planets_with_natural_resources(gfx: &mut Graphics, world: &World, zoom_s
             let circle = Circle::new(position, 10. * zoom_scale);
             gfx.fill_circle(
                 &circle,
-                if natural_resources.resource == Water {
-                    Color::BLUE
-                } else {
-                    Color::WHITE
+                match natural_resources.resource {
+                    Water => Color::BLUE,
+                    Hydrogen => Color::PURPLE,
+                    other => panic!(format!("Unhandled color: {:?}", other)),
                 },
             );
         },
     );
 }
 
-fn draw_planets_without_natural_resources(
-    gfx: &mut Graphics,
-    world: &World,
-    zoom_scale: f32,
-    font: &mut FontRenderer,
-) {
+fn draw_planets_without_natural_resources(gfx: &mut Graphics, world: &World, zoom_scale: f32) {
     let mut query = <(&Position, &Planet, &Name)>::query().filter(!component::<NaturalResources>());
     query.for_each(
         world,
@@ -63,32 +65,6 @@ fn draw_planets_without_natural_resources(
             );
             let circle = Circle::new(position, 10. * zoom_scale);
             gfx.fill_circle(&circle, Color::WHITE);
-
-            <(&Position, &Stockpiles, &Population)>::query()
-                .filter(component::<Selected>())
-                .for_each(
-                    world,
-                    |(position, stockpiles, population): (&Position, &Stockpiles, &Population)| {
-                        let position = Vector::new(
-                            (position.point.x - 20.) as f32,
-                            (position.point.y - 20.) as f32,
-                        );
-
-                        font.draw(
-                            gfx,
-                            // format!("FPS: {}", last_fps).as_str(),
-                            // name.name.as_str(),
-                            format!(
-                                "Pop: {}\nStockpiles: {:?}",
-                                population.population, stockpiles
-                            )
-                            .as_str(),
-                            Color::GREEN,
-                            position + *NAME_OFFSET,
-                        )
-                        .expect("failed to draw stockpiles");
-                    },
-                );
         },
     );
 }
@@ -117,5 +93,80 @@ fn draw_selected_markers(gfx: &mut Graphics, world: &World, _zoom_scale: f32) {
             );
             let rectangle = Rectangle::new(position, Vector::new(40., 40.));
             gfx.stroke_rect(&rectangle, Color::GREEN);
+        });
+}
+
+fn draw_selected_planet_info(gfx: &mut Graphics, world: &World, font: &mut FontRenderer) {
+    <(&Position, &Stockpiles, &Population, &Market, &Name)>::query()
+        .filter(component::<Selected>())
+        .for_each(
+            world,
+            |(position, stockpiles, population, market, name): (
+                &Position,
+                &Stockpiles,
+                &Population,
+                &Market,
+                &Name,
+            )| {
+                let position = Vector::new(
+                    (position.point.x - 20.) as f32,
+                    (position.point.y - 20.) as f32,
+                );
+
+                font.draw(
+                    gfx,
+                    // format!("FPS: {}", last_fps).as_str(),
+                    // name.name.as_str(),
+                    format!(
+                        "{}\nPop: {}\nStockpiles: {:?}\nFood (B/S): {}/{}",
+                        name.name,
+                        population.population,
+                        stockpiles,
+                        market.food_buy_price,
+                        market.food_sell_price
+                    )
+                    .as_str(),
+                    Color::GREEN,
+                    position + *NAME_OFFSET,
+                )
+                .expect("failed to draw stockpiles");
+            },
+        );
+}
+
+fn draw_selected_ship_info(gfx: &mut Graphics, world: &World, font: &mut FontRenderer) {
+    let id_name_lookup = <(&Id, &Name)>::query()
+        .iter(world)
+        .map(|(id, name): (&Id, &Name)| (id.uuid, name.name.clone()))
+        .collect::<HashMap<Uuid, String>>();
+
+    <(&Position, &Ship)>::query()
+        .filter(component::<Selected>())
+        .for_each(world, |(position, ship): (&Position, &Ship)| {
+            let position = Vector::new(
+                (position.point.x - 20.) as f32,
+                (position.point.y - 20.) as f32,
+            );
+
+            let objective = match ship.objective {
+                ShipObjective::Idle => String::from("Idle"),
+                ShipObjective::TravelTo(destination) => format!(
+                    "Travelling to {}",
+                    id_name_lookup
+                        .get(&destination)
+                        .expect("No such destination")
+                ),
+                // ShipObjective::DockedAt(dock) => format!("Docked at {}", id_name_lookup.get(&dock).expect("No such destination")),
+            };
+
+            font.draw(
+                gfx,
+                // format!("FPS: {}", last_fps).as_str(),
+                // name.name.as_str(),
+                format!("Objective: {:?}", objective,).as_str(),
+                Color::GREEN,
+                position + *NAME_OFFSET,
+            )
+            .expect("failed to draw stockpiles");
         });
 }

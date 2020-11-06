@@ -14,19 +14,20 @@ use crate::util::convert;
 mod components;
 mod core;
 mod draw;
+mod economy_components;
 mod market_calculations;
 mod ship_components;
 mod util;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
 #[cfg(any(target_arch = "wasm32", debug_assertions))]
-pub(crate) const FPS: f32 = 60.0;
+pub const FPS: f32 = 60.0;
 #[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
-pub(crate) const FPS: f32 = 144.0;
-pub(crate) const UPS: f32 = 200.;
+pub const FPS: f32 = 144.0;
+pub const UPS: f32 = 200.;
 
-pub(crate) const WIDTH: f32 = 800.0;
-pub(crate) const HEIGHT: f32 = 600.0;
+pub const WIDTH: f32 = 800.0;
+pub const HEIGHT: f32 = 600.0;
 
 fn main() {
     run(
@@ -58,9 +59,10 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
     let mut day_tick_timer = Timer::time_per_second(1.);
 
     let ttf = VectorFont::from_slice(include_bytes!("BebasNeue-Regular.ttf"));
-    let mut font = ttf.to_renderer(&gfx, 30.0)?;
+    let mut font = ttf.to_renderer(&gfx, 20.0)?;
 
     let mut running = true;
+    let mut speed_up = false;
     let mut camera_y_axis;
     let mut camera_x_axis;
     let mut zoom_scale = 1.;
@@ -79,6 +81,10 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
                     core.pause();
                 } else if keyboard_event.is_down() && keyboard_event.key() == Key::Escape {
                     running = false;
+                } else if keyboard_event.is_down() && keyboard_event.key() == Key::LShift {
+                    speed_up = true;
+                } else {
+                    speed_up = false;
                 }
             } else if let Event::ScrollInput(delta) = event {
                 if let ScrollDelta::Lines(lines) = delta {
@@ -102,10 +108,20 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
         // We use a while loop rather than an if so that we can try to catch up in the event of having a slow down.
         while update_timer.tick() {
             core.tick(dt, camera_x_axis, camera_y_axis);
+            if speed_up {
+                for _ in 1..10 {
+                    core.tick(dt, camera_x_axis, camera_y_axis);
+                }
+            }
         }
 
         while day_tick_timer.tick() {
             core.tick_day();
+            if speed_up {
+                for _ in 1..10 {
+                    core.tick_day();
+                }
+            }
         }
 
         // Unlike the update cycle drawing doesn't change our state

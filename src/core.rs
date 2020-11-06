@@ -10,21 +10,24 @@ use ncollide2d::shape::Ball;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 
-use crate::components::Resource::{Food, Water};
+use crate::components::Resource::Food;
 use crate::components::{
     Id, Name, NaturalResources, Planet, Population, Position, Resource, Selectable, Selected,
     Shape, Stockpiles,
 };
-use crate::ship_components::Ship;
-use crate::{HEIGHT, WIDTH};
+use crate::economy_components::Market;
+use crate::market_calculations::MarketWithPosition;
+use crate::ship_components::ShipObjective::Idle;
+use crate::ship_components::{Ship, ShipObjective};
+use crate::{market_calculations, HEIGHT, WIDTH};
 
-pub(crate) struct Core {
-    pub(crate) world: World,
+pub struct Core {
+    pub world: World,
     paused: bool,
 }
 
 impl Core {
-    pub(crate) fn new() -> Core {
+    pub fn new() -> Core {
         let world = World::default();
         Core {
             world,
@@ -32,7 +35,7 @@ impl Core {
         }
     }
 
-    pub(crate) fn init(&mut self) {
+    pub fn init(&mut self) {
         let mut names = vec![
             "denkenia",
             "chilliter",
@@ -76,7 +79,10 @@ impl Core {
                 Position {
                     point: Point2::new(x, y),
                 },
-                Stockpiles { stockpiles },
+                Stockpiles {
+                    stockpiles,
+                    size: 1000,
+                },
                 Shape {
                     shape: Ball::new(10.),
                 },
@@ -84,6 +90,7 @@ impl Core {
                 Population {
                     population: rng.gen_range(1, 10),
                 },
+                Market::default(),
             )
         }));
 
@@ -106,9 +113,15 @@ impl Core {
                     // println!("{:?} has {:?}", entity, entry.archetype().layout().component_types());
 
                     // add an extra component
-                    if rng.gen_range(0, 3) == 0 {
+                    if rng.gen_range(0, 4) == 0 {
                         entry.add_component(NaturalResources {
                             resource: Resource::Water,
+                        });
+                    }
+                    // add an extra component
+                    else if rng.gen_range(0, 3) == 0 {
+                        entry.add_component(NaturalResources {
+                            resource: Resource::Hydrogen,
                         });
                     }
                 }
@@ -124,7 +137,10 @@ impl Core {
         self.world.extend((0..1).map(|_| {
             (
                 Id::default(),
-                Ship,
+                Ship {
+                    objective: Idle,
+                    speed: 1.,
+                },
                 Name {
                     name: String::from("Wayfarer"),
                 },
@@ -144,13 +160,14 @@ impl Core {
             &mut self.world,
             |(natural_resources, stockpiles): (&NaturalResources, &mut Stockpiles)| {
                 let produced_resource = match &natural_resources.resource {
-                    Water => Food,
+                    Resource::Water => Resource::Food,
+                    Resource::Hydrogen => Resource::Fuel,
                     other => panic!(format!("Unhandled natural resource: {:?}", other)),
                 };
 
                 let current_stockpile =
                     *stockpiles.stockpiles.get(&produced_resource).unwrap_or(&0);
-                let new_stockpile = min(1000, current_stockpile + 10);
+                let new_stockpile = min(stockpiles.size, current_stockpile + 10);
                 stockpiles
                     .stockpiles
                     .insert(produced_resource, new_stockpile);
@@ -173,11 +190,61 @@ impl Core {
                 }
             },
         );
+
+        //calculate prices
+        {
+            <(&Stockpiles, &mut Market)>::query().for_each_mut(
+                &mut self.world,
+                |(stockpiles, market): (&Stockpiles, &mut Market)| {
+                    let food_amount = *stockpiles.stockpiles.get(&Food).unwrap_or(&0);
+                    let food_selling_price = market_calculations::calculate_basic_selling_price(
+                        food_amount,
+                        stockpiles.size,
+                        0,
+                        0,
+                    );
+                    let food_buying_price = market_calculations::calculate_basic_buying_price(
+                        food_amount,
+                        stockpiles.size,
+                        0,
+                        0,
+                    );
+                    market.food_buy_price = food_buying_price;
+                    market.food_sell_price = food_selling_price;
+                },
+            );
+        }
+
+        // Figure out something for idle ships to do
+        {
+            let markets = <(&Market, &Position, &Id)>::query()
+                .iter(&self.world)
+                .map(|(market, position, id)| MarketWithPosition {
+                    id: id.uuid,
+                    position: position.point,
+                    food_buy_price: market.food_buy_price,
+                    food_sell_price: market.food_sell_price,
+                })
+                .collect::<Vec<_>>();
+
+            <(&mut Ship, &Position)>::query().for_each_mut(
+                &mut self.world,
+                |(ship, pos): (&mut Ship, &Position)| {
+                    if ship.objective == Idle {
+                        let most_profitable_route =
+                            market_calculations::get_most_profitable_route(&markets, &pos.point);
+                        ship.objective = ShipObjective::TravelTo(most_profitable_route.source)
+                    }
+                },
+            );
+        }
     }
 
-    pub(crate) fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {}
+    pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {}
 
-    pub(crate) fn click(&mut self, click_position: Vector2<f64>) {
+    pub fn click(&mut self, click_position: Vector2<f64>) {
+        const MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER: f64 = 5f64;
+        // find clicked entity
         let mut query = <(&Position, &Shape)>::query().filter(component::<Selectable>());
         let clicked_entity = query
             .iter_chunks(&self.world)
@@ -194,7 +261,7 @@ impl Core {
                     (entity, distance)
                 },
             )
-            .filter(|(_, distance)| distance < &5f64)
+            .filter(|(_, distance)| distance < &MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER)
             .sorted_by(|(_, left_distance), (_, right_distance)| {
                 left_distance
                     .partial_cmp(right_distance)
@@ -203,19 +270,23 @@ impl Core {
             .next()
             .map(|(entity, _)| entity);
 
-        let selected_entities = <&Selectable>::query()
-            .filter(component::<Selected>())
-            .iter_chunks(&self.world)
-            .flat_map(|chunk| chunk.into_iter_entities())
-            .map(|(entity, _)| entity)
-            .collect::<Vec<_>>();
+        // deselect everything
+        {
+            let selected_entities = <&Selectable>::query()
+                .filter(component::<Selected>())
+                .iter_chunks(&self.world)
+                .flat_map(|chunk| chunk.into_iter_entities())
+                .map(|(entity, _)| entity)
+                .collect::<Vec<_>>();
 
-        for entity in selected_entities {
-            if let Some(mut entry) = self.world.entry(entity) {
-                entry.remove_component::<Selected>();
+            for entity in selected_entities {
+                if let Some(mut entry) = self.world.entry(entity) {
+                    entry.remove_component::<Selected>();
+                }
             }
         }
 
+        // Select clicked entity
         if let Some(entity) = clicked_entity {
             // clicked something
             if let Some(mut entry) = self.world.entry(entity) {
@@ -224,7 +295,7 @@ impl Core {
         }
     }
 
-    pub(crate) fn pause(&mut self) {
+    pub fn pause(&mut self) {
         self.paused = self.paused.not();
     }
 }
