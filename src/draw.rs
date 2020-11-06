@@ -161,8 +161,6 @@ fn draw_selected_ship_info(gfx: &mut Graphics, world: &World, font: &mut FontRen
 
             font.draw(
                 gfx,
-                // format!("FPS: {}", last_fps).as_str(),
-                // name.name.as_str(),
                 format!("Objective: {:?}", objective,).as_str(),
                 Color::GREEN,
                 position + *NAME_OFFSET,

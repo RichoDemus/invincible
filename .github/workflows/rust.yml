@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
 #  pull_request:
-#    branches: [ master ]
+#    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -47,8 +47,8 @@ jobs:
           command: test
           args: --all-features --no-run
 
-#      - name: Install cargo-web
-#        run: cargo install cargo-web
+  #      - name: Install cargo-web
+  #        run: cargo install cargo-web
 
   check:
     name: cargo check
