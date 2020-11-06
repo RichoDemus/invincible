@@ -1,5 +1,5 @@
 # Invincible
-Currently deployed at [richodemus.github.io/invincible](https://richodemus.github.io/invincible)
+Currently deployed at [richodemus.github.io/invincible/](https://richodemus.github.io/invincible/)
 
 ## run locally
 desktop
