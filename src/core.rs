@@ -18,7 +18,7 @@ use crate::components::{
 use crate::economy_components::Market;
 use crate::market_calculations::MarketWithPosition;
 use crate::ship_components::ShipObjective::Idle;
-use crate::ship_components::{Ship, ShipObjective};
+use crate::ship_components::{Destination, Ship, ShipObjective, Velocity};
 use crate::{market_calculations, HEIGHT, WIDTH};
 
 pub struct Core {
@@ -139,7 +139,7 @@ impl Core {
                 Id::default(),
                 Ship {
                     objective: Idle,
-                    speed: 1.,
+                    max_speed: 1.,
                 },
                 Name {
                     name: String::from("Wayfarer"),
@@ -151,6 +151,8 @@ impl Core {
                     shape: Ball::new(2.),
                 },
                 Selectable,
+                Destination { destination: None },
+                Velocity::default(),
             )
         }));
     }
@@ -227,20 +229,43 @@ impl Core {
                 })
                 .collect::<Vec<_>>();
 
-            <(&mut Ship, &Position)>::query().for_each_mut(
+            <(&mut Ship, &Position, &mut Destination)>::query().for_each_mut(
                 &mut self.world,
-                |(ship, pos): (&mut Ship, &Position)| {
+                |(ship, pos, destination): (&mut Ship, &Position, &mut Destination)| {
                     if ship.objective == Idle {
                         let most_profitable_route =
                             market_calculations::get_most_profitable_route(&markets, &pos.point);
-                        ship.objective = ShipObjective::TravelTo(most_profitable_route.source)
+                        ship.objective = ShipObjective::TravelTo(most_profitable_route.source.0);
+                        destination.destination = Some((
+                            most_profitable_route.source.0,
+                            most_profitable_route.source.1,
+                        ));
                     }
                 },
             );
         }
     }
 
-    pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {}
+    pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {
+        <(&mut Position, &mut Velocity, &Destination)>::query().for_each_mut(
+            &mut self.world,
+            |(position, velocity, destination): (&mut Position, &mut Velocity, &Destination)| {
+                if let Some((_, destination)) = destination.destination {
+                    let vector: Vector2<f64> = destination - position.point;
+                    let vector = vector.normalize(); //maybe not needed here
+
+                    let new_velocity = velocity.velocity + vector;
+                    let new_velocity = new_velocity.normalize();
+                    velocity.velocity = new_velocity;
+
+                    // panic!("Vector and new: : {:?}, {:?}", vector, new_velocity);
+
+                    //todo move to separate thing:
+                    position.point += new_velocity;
+                }
+            },
+        );
+    }
 
     pub fn click(&mut self, click_position: Vector2<f64>) {
         const MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER: f64 = 5f64;

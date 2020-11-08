@@ -31,7 +31,7 @@ pub struct MarketWithPosition {
 }
 
 pub struct Route {
-    pub source: Uuid,
+    pub source: (Uuid, Point2<f64>),
     pub destination: Uuid,
 }
 
@@ -60,7 +60,7 @@ pub fn get_most_profitable_route(
         result
     }
 
-    let (source, destination, _profit, _distance, _profit_per_distance) = markets
+    let (source, source_position, destination, _profit, _distance, _profit_per_distance) = markets
         .iter()
         .permutations(2)
         .map(|vec| {
@@ -107,6 +107,7 @@ pub fn get_most_profitable_route(
             |(source, destination, profit, distance, profit_per_distance)| {
                 (
                     source.id,
+                    source.position.clone(),
                     destination.id,
                     profit,
                     distance,
@@ -117,7 +118,7 @@ pub fn get_most_profitable_route(
         .expect("no routes?");
 
     Route {
-        source,
+        source: (source, source_position),
         destination,
     }
 }
@@ -161,7 +162,7 @@ mod tests {
 
         let result = get_most_profitable_route(&markets, &Point2::new(15., 15.));
 
-        assert_eq!(result.source, source.id, "wrong source");
+        assert_eq!(result.source.0, source.id, "wrong source");
         assert_eq!(result.destination, destination.id, "wrong destination");
     }
 }
