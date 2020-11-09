@@ -18,7 +18,9 @@ use crate::components::{
 use crate::economy_components::Market;
 use crate::market_calculations::MarketWithPosition;
 use crate::ship_components::ShipObjective::Idle;
-use crate::ship_components::{Destination, Ship, ShipObjective, Velocity};
+use crate::ship_components::{
+    is_close_enough_to_dock, Destination, Docked, Ship, ShipObjective, Velocity,
+};
 use crate::{market_calculations, HEIGHT, WIDTH};
 
 pub struct Core {
@@ -258,13 +260,43 @@ impl Core {
                     let new_velocity = new_velocity.normalize();
                     velocity.velocity = new_velocity;
 
-                    // panic!("Vector and new: : {:?}, {:?}", vector, new_velocity);
-
                     //todo move to separate thing:
                     position.point += new_velocity;
                 }
             },
         );
+
+        let entities_that_have_arrived = <(&Position, &Destination)>::query()
+            .iter_chunks(&self.world)
+            .flat_map(|chunk| chunk.into_iter_entities())
+            .filter_map(
+                |(entity, (position, destination)): (Entity, (&Position, &Destination))| {
+                    if let Some((destination_id, destination_point)) = destination.destination {
+                        Some((entity, position.point, destination_id, destination_point))
+                    } else {
+                        None
+                    }
+                },
+            )
+            .filter(|(_entity, position, _destination_id, destination_point)| {
+                is_close_enough_to_dock(destination_point, position)
+            })
+            .collect::<Vec<_>>();
+
+        for (entity, _position, destination_uid, _desitination_point) in entities_that_have_arrived
+        {
+            if let Some(mut entry) = self.world.entry(entity) {
+                entry.add_component(Docked {
+                    docked_at: destination_uid,
+                });
+                let destination = entry
+                    .get_component_mut::<Destination>()
+                    .expect("Should have a destination");
+                destination.destination = None;
+                entry.remove_component::<Velocity>();
+                entry.remove_component::<Position>();
+            }
+        }
     }
 
     pub fn click(&mut self, click_position: Vector2<f64>) {

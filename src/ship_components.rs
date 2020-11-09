@@ -23,3 +23,13 @@ pub struct Velocity {
 pub struct Destination {
     pub destination: Option<(Uuid, Point2<f64>)>,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Docked {
+    pub(crate) docked_at: Uuid,
+}
+
+pub fn is_close_enough_to_dock(left: &Point2<f64>, right: &Point2<f64>) -> bool {
+    let distance: Vector2<f64> = left - right;
+    distance.magnitude() < 3.
+}

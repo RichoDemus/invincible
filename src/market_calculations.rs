@@ -107,7 +107,7 @@ pub fn get_most_profitable_route(
             |(source, destination, profit, distance, profit_per_distance)| {
                 (
                     source.id,
-                    source.position.clone(),
+                    source.position,
                     destination.id,
                     profit,
                     distance,
