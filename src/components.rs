@@ -4,7 +4,7 @@ use nalgebra::Point2;
 use ncollide2d::shape::Ball;
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Id {
     pub uuid: Uuid,
 }
@@ -34,6 +34,7 @@ pub struct Name {
 pub enum Resource {
     Water,
     Food,
+    #[allow(dead_code)]
     Hydrogen,
     Fuel,
 }
@@ -43,6 +44,7 @@ pub struct NaturalResources {
     pub resource: Resource,
 }
 
+// todo rename to cargo, cargohold, inventory?
 #[derive(Clone, Debug)]
 pub struct Stockpiles {
     pub stockpiles: HashMap<Resource, u64>,

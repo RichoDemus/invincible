@@ -140,31 +140,38 @@ fn draw_selected_ship_info(gfx: &mut Graphics, world: &World, font: &mut FontRen
         .map(|(id, name): (&Id, &Name)| (id.uuid, name.name.clone()))
         .collect::<HashMap<Uuid, String>>();
 
-    <(&Position, &Ship)>::query()
+    <(&Position, &Ship, &Stockpiles)>::query()
         .filter(component::<Selected>())
-        .for_each(world, |(position, ship): (&Position, &Ship)| {
-            let position = Vector::new(
-                (position.point.x - 20.) as f32,
-                (position.point.y - 20.) as f32,
-            );
+        .for_each(
+            world,
+            |(position, ship, stockpiles): (&Position, &Ship, &Stockpiles)| {
+                let position = Vector::new(
+                    (position.point.x - 20.) as f32,
+                    (position.point.y - 20.) as f32,
+                );
 
-            let objective = match ship.objective {
-                ShipObjective::Idle => String::from("Idle"),
-                ShipObjective::TravelTo(destination) => format!(
-                    "Travelling to {}",
-                    id_name_lookup
-                        .get(&destination)
-                        .expect("No such destination")
-                ),
-                // ShipObjective::DockedAt(dock) => format!("Docked at {}", id_name_lookup.get(&dock).expect("No such destination")),
-            };
+                let objective = match ship.objective {
+                    ShipObjective::Idle => String::from("Idle"),
+                    ShipObjective::TravelTo(destination) => format!(
+                        "Travelling to {}",
+                        id_name_lookup
+                            .get(&destination)
+                            .expect("No such destination")
+                    ),
+                    // ShipObjective::DockedAt(dock) => format!("Docked at {}", id_name_lookup.get(&dock).expect("No such destination")),
+                };
 
-            font.draw(
-                gfx,
-                format!("Objective: {:?}", objective,).as_str(),
-                Color::GREEN,
-                position + *NAME_OFFSET,
-            )
-            .expect("failed to draw stockpiles");
-        });
+                font.draw(
+                    gfx,
+                    format!(
+                        "Objective: {:?}\nStockpiles: {:?}",
+                        objective, stockpiles.stockpiles
+                    )
+                    .as_str(),
+                    Color::GREEN,
+                    position + *NAME_OFFSET,
+                )
+                .expect("failed to draw stockpiles");
+            },
+        );
 }

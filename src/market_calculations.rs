@@ -2,6 +2,8 @@ use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
 
+use crate::components::Resource;
+
 pub fn calculate_basic_selling_price(
     stockpile_size: u64,
     max_stockpile: u64,
@@ -30,9 +32,11 @@ pub struct MarketWithPosition {
     pub food_sell_price: u64,
 }
 
+#[derive(Clone, Debug)]
 pub struct Route {
     pub source: (Uuid, Point2<f64>),
     pub destination: Uuid,
+    pub commodity: Resource,
 }
 
 pub fn get_most_profitable_route(
@@ -120,6 +124,7 @@ pub fn get_most_profitable_route(
     Route {
         source: (source, source_position),
         destination,
+        commodity: Resource::Food, //don't hardcode ^^
     }
 }
 

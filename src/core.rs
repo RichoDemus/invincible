@@ -9,6 +9,7 @@ use ncollide2d::query::PointQuery;
 use ncollide2d::shape::Ball;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
+use uuid::Uuid;
 
 use crate::components::Resource::Food;
 use crate::components::{
@@ -121,11 +122,11 @@ impl Core {
                         });
                     }
                     // add an extra component
-                    else if rng.gen_range(0, 3) == 0 {
-                        entry.add_component(NaturalResources {
-                            resource: Resource::Hydrogen,
-                        });
-                    }
+                    // else if rng.gen_range(0, 3) == 0 {
+                    //     entry.add_component(NaturalResources {
+                    //         resource: Resource::Hydrogen,
+                    //     });
+                    // }
                 }
             }
 
@@ -155,6 +156,10 @@ impl Core {
                 Selectable,
                 Destination { destination: None },
                 Velocity::default(),
+                Stockpiles {
+                    stockpiles: Default::default(),
+                    size: 100,
+                },
             )
         }));
     }
@@ -219,6 +224,21 @@ impl Core {
             );
         }
 
+        let markets: HashMap<Uuid, MarketWithPosition> = <(&Market, &Position, &Id)>::query()
+            .iter(&self.world)
+            .map(|(market, position, id)| {
+                (
+                    id.uuid,
+                    MarketWithPosition {
+                        id: id.uuid,
+                        position: position.point,
+                        food_buy_price: market.food_buy_price,
+                        food_sell_price: market.food_sell_price,
+                    },
+                )
+            })
+            .collect();
+
         // Figure out something for idle ships to do
         {
             let markets = <(&Market, &Position, &Id)>::query()
@@ -246,9 +266,126 @@ impl Core {
                 },
             );
         }
+
+        // Handle docked ships, buy and sell or just move again
+        {
+            let docked_ships: Vec<(Uuid, Docked, Stockpiles)> =
+                <(&Id, &Docked, &Stockpiles)>::query()
+                    .filter(component::<Ship>())
+                    .iter(&self.world)
+                    .map(|(id, docked, stockpiles)| (id.uuid, *docked, stockpiles.clone()))
+                    .collect::<Vec<_>>();
+
+            let mut buy_orders = vec![];
+            let mut move_orders = HashMap::new();
+            for (id, docked_at, _stockpiles) in docked_ships {
+                let current_position = markets
+                    .get(&docked_at.docked_at)
+                    .expect("the ship should be at a station")
+                    .position;
+                let markets_with_positions = markets.values().cloned().collect::<Vec<_>>();
+                let most_profitable_route = market_calculations::get_most_profitable_route(
+                    &markets_with_positions,
+                    &current_position,
+                );
+                println!("Most profitable route: {:?}", most_profitable_route);
+                if most_profitable_route.source.0 != docked_at.docked_at {
+                    println!("\t wrong station, moving");
+                    move_orders.insert(id, most_profitable_route.source.0);
+                } else {
+                    println!("Creating buy order");
+                    let ship_id = id;
+                    let station_id = docked_at.docked_at;
+                    let commodity = most_profitable_route.commodity;
+                    let amount = 100; // todo calculate this
+                    buy_orders.push((ship_id, station_id, commodity, amount));
+                }
+            }
+
+            let ids_of_ship_that_are_leaving =
+                move_orders.iter().map(|(id, _)| id).collect::<Vec<_>>();
+            let entities_that_are_leaving: Vec<(Entity, Id, Docked)> = <(&Id, &Docked)>::query()
+                .filter(component::<Ship>())
+                .iter_chunks(&self.world)
+                .flat_map(|chunk| chunk.into_iter_entities())
+                .filter(|(_entity, (id, _docked_at))| {
+                    ids_of_ship_that_are_leaving.contains(&&id.uuid)
+                })
+                .map(|(entity, (id, docked_at))| (entity, *id, *docked_at))
+                .collect::<Vec<_>>();
+
+            for (entity, id, docked_at) in entities_that_are_leaving {
+                if let Some(mut entry) = self.world.entry(entity) {
+                    entry.add_component(Position {
+                        point: markets
+                            .get(&docked_at.docked_at)
+                            .expect("Should be a station here")
+                            .position,
+                    });
+                    entry.add_component(Velocity {
+                        velocity: Vector2::new(0., 0.),
+                    });
+
+                    let move_to = move_orders
+                        .get(&id.uuid)
+                        .expect("should totes be a station here");
+                    let move_to_pos = markets
+                        .get(&move_to)
+                        .expect("this is getting tiring")
+                        .position;
+
+                    {
+                        let destination = entry
+                            .get_component_mut::<Destination>()
+                            .expect("Should have a destination");
+                        destination.destination = Some((*move_to, move_to_pos));
+                    }
+                    {
+                        let ship = entry
+                            .get_component_mut::<Ship>()
+                            .expect("Should have a ship");
+                        ship.objective = ShipObjective::TravelTo(*move_to);
+                    }
+                    entry.remove_component::<Docked>();
+                }
+            }
+
+            <(&Id, &mut Stockpiles)>::query()
+                .filter(component::<Planet>())
+                .for_each_mut(
+                    &mut self.world,
+                    |(id, stockpiles): (&Id, &mut Stockpiles)| {
+                        let id = id.uuid;
+                        if let Some((_ship_id, _market_id, commodity, amount)) = buy_orders
+                            .iter()
+                            .find(|(_, market_id, _, _)| market_id == &id)
+                        {
+                            *stockpiles
+                                .stockpiles
+                                .get_mut(commodity)
+                                .expect("this station should have this stockpile") -= amount;
+                        }
+                    },
+                );
+
+            <(&Id, &mut Stockpiles)>::query()
+                .filter(component::<Ship>())
+                .for_each_mut(
+                    &mut self.world,
+                    |(id, stockpiles): (&Id, &mut Stockpiles)| {
+                        let id = id.uuid;
+                        if let Some((_ship_id, _market_id, commodity, amount)) =
+                            buy_orders.iter().find(|(ship_id, _, _, _)| ship_id == &id)
+                        {
+                            *stockpiles.stockpiles.entry(*commodity).or_insert(0) += amount;
+                        }
+                    },
+                );
+        }
     }
 
     pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {
+        // move entities with a destination towards it
         <(&mut Position, &mut Velocity, &Destination)>::query().for_each_mut(
             &mut self.world,
             |(position, velocity, destination): (&mut Position, &mut Velocity, &Destination)| {
@@ -266,35 +403,39 @@ impl Core {
             },
         );
 
-        let entities_that_have_arrived = <(&Position, &Destination)>::query()
-            .iter_chunks(&self.world)
-            .flat_map(|chunk| chunk.into_iter_entities())
-            .filter_map(
-                |(entity, (position, destination)): (Entity, (&Position, &Destination))| {
-                    if let Some((destination_id, destination_point)) = destination.destination {
-                        Some((entity, position.point, destination_id, destination_point))
-                    } else {
-                        None
-                    }
-                },
-            )
-            .filter(|(_entity, position, _destination_id, destination_point)| {
-                is_close_enough_to_dock(destination_point, position)
-            })
-            .collect::<Vec<_>>();
-
-        for (entity, _position, destination_uid, _desitination_point) in entities_that_have_arrived
+        // arrive at destination
         {
-            if let Some(mut entry) = self.world.entry(entity) {
-                entry.add_component(Docked {
-                    docked_at: destination_uid,
-                });
-                let destination = entry
-                    .get_component_mut::<Destination>()
-                    .expect("Should have a destination");
-                destination.destination = None;
-                entry.remove_component::<Velocity>();
-                entry.remove_component::<Position>();
+            let entities_that_have_arrived = <(&Position, &Destination)>::query()
+                .iter_chunks(&self.world)
+                .flat_map(|chunk| chunk.into_iter_entities())
+                .filter_map(
+                    |(entity, (position, destination)): (Entity, (&Position, &Destination))| {
+                        if let Some((destination_id, destination_point)) = destination.destination {
+                            Some((entity, position.point, destination_id, destination_point))
+                        } else {
+                            None
+                        }
+                    },
+                )
+                .filter(|(_entity, position, _destination_id, destination_point)| {
+                    is_close_enough_to_dock(destination_point, position)
+                })
+                .collect::<Vec<_>>();
+
+            for (entity, _position, destination_uid, _desitination_point) in
+                entities_that_have_arrived
+            {
+                if let Some(mut entry) = self.world.entry(entity) {
+                    entry.add_component(Docked {
+                        docked_at: destination_uid,
+                    });
+                    let destination = entry
+                        .get_component_mut::<Destination>()
+                        .expect("Should have a destination");
+                    destination.destination = None;
+                    entry.remove_component::<Velocity>();
+                    entry.remove_component::<Position>();
+                }
             }
         }
     }
