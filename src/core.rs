@@ -165,6 +165,10 @@ impl Core {
     }
 
     pub fn tick_day(&mut self) {
+        if self.paused {
+            return;
+        }
+
         <(&NaturalResources, &mut Stockpiles)>::query().for_each_mut(
             &mut self.world,
             |(natural_resources, stockpiles): (&NaturalResources, &mut Stockpiles)| {
@@ -385,6 +389,9 @@ impl Core {
     }
 
     pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {
+        if self.paused {
+            return;
+        }
         // move entities with a destination towards it
         <(&mut Position, &mut Velocity, &Destination)>::query().for_each_mut(
             &mut self.world,
