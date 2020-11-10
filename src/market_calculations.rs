@@ -2,7 +2,7 @@ use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
 
-use crate::components::Resource;
+use crate::components::{Commodity, InventoryItem};
 
 pub fn calculate_basic_selling_price(
     stockpile_size: u64,
@@ -36,7 +36,7 @@ pub struct MarketWithPosition {
 pub struct Route {
     pub source: (Uuid, Point2<f64>),
     pub destination: Uuid,
-    pub commodity: Resource,
+    pub commodity: Commodity,
 }
 
 #[allow(dead_code)]
@@ -125,7 +125,7 @@ pub fn get_most_profitable_route(
     Route {
         source: (source, source_position),
         destination,
-        commodity: Resource::Food, //don't hardcode ^^
+        commodity: Commodity::Food, //don't hardcode ^^
     }
 }
 
@@ -145,7 +145,7 @@ pub fn calculate_where_to_buy_frakking_food(markets: Vec<MarketWithPosition>) ->
 }
 
 pub fn calculate_where_to_sell_cargo(
-    inventory: &[(Resource, u64)],
+    inventory: &[(Commodity, InventoryItem)],
     markets: Vec<MarketWithPosition>,
 ) -> Option<Uuid> {
     markets
@@ -153,11 +153,11 @@ pub fn calculate_where_to_sell_cargo(
         .map(|market| {
             let sell_prices = inventory
                 .iter()
-                .map(|(resource, amount)| {
-                    if resource != &Resource::Food {
+                .map(|(commodity, amount)| {
+                    if commodity != &Commodity::Food {
                         panic!("yadda yadda foood");
                     }
-                    market.food_buy_price * amount
+                    market.food_buy_price * amount.amount
                 })
                 .sum();
             (market.id, sell_prices)
@@ -218,7 +218,13 @@ mod tests {
 
     #[test]
     fn test_calculate_where_to_sell_cargo() {
-        let inventory = vec![(Resource::Food, 10)];
+        let inventory = vec![(
+            Commodity::Food,
+            InventoryItem {
+                amount: 10,
+                bought_for: 0,
+            },
+        )];
         let markets = vec![
             MarketWithPosition {
                 id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),

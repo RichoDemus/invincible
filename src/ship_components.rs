@@ -31,6 +31,5 @@ pub struct Docked {
 
 pub fn is_close_enough_to_dock(left: &Point2<f64>, right: &Point2<f64>) -> bool {
     let distance: Vector2<f64> = left - right;
-    let distance = distance.magnitude();
-    distance < 3.
+    distance.magnitude() < 3.
 }

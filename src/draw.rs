@@ -6,10 +6,10 @@ use quicksilver::graphics::{Color, FontRenderer};
 use quicksilver::Graphics;
 use uuid::Uuid;
 
-use crate::components::Resource::Hydrogen;
-use crate::components::Resource::Water;
+use crate::components::Commodity::Hydrogen;
+use crate::components::Commodity::Water;
 use crate::components::{
-    Id, Name, NaturalResources, Planet, Population, Position, Selected, Shape, Stockpiles,
+    Id, Inventory, Name, NaturalResources, Planet, Population, Position, Selected, Shape,
 };
 use crate::economy_components::Market;
 use crate::ship_components::{Ship, ShipObjective};
@@ -98,13 +98,13 @@ fn draw_selected_markers(gfx: &mut Graphics, world: &World, _zoom_scale: f32) {
 }
 
 fn draw_selected_planet_info(gfx: &mut Graphics, world: &World, font: &mut FontRenderer) {
-    <(&Position, &Stockpiles, &Population, &Market, &Name)>::query()
+    <(&Position, &Inventory, &Population, &Market, &Name)>::query()
         .filter(component::<Selected>())
         .for_each(
             world,
             |(position, stockpiles, population, market, name): (
                 &Position,
-                &Stockpiles,
+                &Inventory,
                 &Population,
                 &Market,
                 &Name,
@@ -149,11 +149,11 @@ fn draw_selected_ship_info(gfx: &mut Graphics, world: &World, font: &mut FontRen
         .map(|(id, name): (&Id, &Name)| (id.uuid, name.name.clone()))
         .collect::<HashMap<Uuid, String>>();
 
-    <(&Position, &Ship, &Stockpiles)>::query()
+    <(&Position, &Ship, &Inventory)>::query()
         .filter(component::<Selected>())
         .for_each(
             world,
-            |(position, ship, stockpiles): (&Position, &Ship, &Stockpiles)| {
+            |(position, ship, stockpiles): (&Position, &Ship, &Inventory)| {
                 let position = Vector::new(
                     (position.point.x - 20.) as f32,
                     (position.point.y - 20.) as f32,
@@ -174,7 +174,7 @@ fn draw_selected_ship_info(gfx: &mut Graphics, world: &World, font: &mut FontRen
                     gfx,
                     format!(
                         "Objective: {:?}\nStockpiles: {:?}",
-                        objective, stockpiles.stockpiles
+                        objective, stockpiles.contents
                     )
                     .as_str(),
                     Color::GREEN,

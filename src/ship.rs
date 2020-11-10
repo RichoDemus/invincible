@@ -3,29 +3,29 @@ use std::collections::HashMap;
 use nalgebra::Point2;
 use uuid::Uuid;
 
-use crate::components::{Resource, Stockpiles};
+use crate::components::{Commodity, Inventory};
 use crate::market_calculations;
 use crate::market_calculations::MarketWithPosition;
 
 #[derive(Debug)]
 pub enum ShipDecision {
     TravelTo(Uuid),
-    Buy(Resource, u64),
-    Sell(Resource, u64),
+    Buy(Commodity, u64),
+    Sell(Commodity, u64),
 }
 
 pub fn figure_out_what_to_do_in_space(
     _position: &Point2<f64>,
-    ship_inventory: &Stockpiles,
+    ship_inventory: &Inventory,
     markets: &HashMap<Uuid, MarketWithPosition>,
 ) -> ShipDecision {
     if ship_inventory.space_left() < 1 {
         //cargo full, lets go sell
         let markets = markets.values().cloned().collect::<Vec<_>>();
         let inventory = ship_inventory
-            .stockpiles
+            .contents
             .iter()
-            .map(|(res, amount)| (*res, *amount))
+            .map(|(res, item)| (*res, *item))
             .collect::<Vec<_>>();
         let destination = market_calculations::calculate_where_to_sell_cargo(&inventory, markets);
         let destination = destination.expect("No where to go");
@@ -42,7 +42,7 @@ pub fn figure_out_what_to_do_in_space(
 pub fn figure_out_what_to_do_at_station(
     station_id: &Uuid,
     _station_position: &Point2<f64>,
-    ship_inventory: &Stockpiles,
+    ship_inventory: &Inventory,
     markets: &HashMap<Uuid, MarketWithPosition>,
 ) -> ShipDecision {
     let markets = markets.values().cloned().collect::<Vec<_>>();
@@ -50,7 +50,7 @@ pub fn figure_out_what_to_do_at_station(
     // cargo full, sell here or go elsewhere?
     if ship_inventory.space_left() < 1 {
         let inventory = ship_inventory
-            .stockpiles
+            .contents
             .iter()
             .map(|(res, amount)| (*res, *amount))
             .collect::<Vec<_>>();
@@ -62,7 +62,7 @@ pub fn figure_out_what_to_do_at_station(
         }
 
         // sell here
-        return ShipDecision::Sell(Resource::Food, 100);
+        return ShipDecision::Sell(Commodity::Food, 100);
     }
 
     // should we go somewhere else to buy?
@@ -74,5 +74,5 @@ pub fn figure_out_what_to_do_at_station(
     }
 
     //buy here!
-    ShipDecision::Buy(Resource::Food, 100)
+    ShipDecision::Buy(Commodity::Food, 100)
 }
