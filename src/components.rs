@@ -32,6 +32,7 @@ pub struct Name {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Resource {
+    //todo rename to commodity or something
     Water,
     Food,
     #[allow(dead_code)]

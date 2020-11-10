@@ -16,6 +16,7 @@ mod core;
 mod draw;
 mod economy_components;
 mod market_calculations;
+mod ship;
 mod ship_components;
 mod util;
 

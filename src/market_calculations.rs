@@ -39,6 +39,7 @@ pub struct Route {
     pub commodity: Resource,
 }
 
+#[allow(dead_code)]
 pub fn get_most_profitable_route(
     markets: &[MarketWithPosition],
     _current_position: &Point2<f64>,
