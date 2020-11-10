@@ -13,6 +13,7 @@ use crate::components::{
 };
 use crate::economy_components::Market;
 use crate::ship_components::{Ship, ShipObjective};
+use crate::{HEIGHT, WIDTH};
 
 lazy_static! {
     static ref NAME_OFFSET: Vector = Vector::new(-20., 60.);
@@ -108,10 +109,18 @@ fn draw_selected_planet_info(gfx: &mut Graphics, world: &World, font: &mut FontR
                 &Market,
                 &Name,
             )| {
-                let position = Vector::new(
-                    (position.point.x - 20.) as f32,
-                    (position.point.y - 20.) as f32,
-                );
+                let mut x = (position.point.x - 20.) as f32;
+                if x + 100. > WIDTH {
+                    x -= 150.
+                }
+                if x < 100. {
+                    x += 150.
+                }
+                let mut y = (position.point.y - 20.) as f32;
+                if y + 100. > HEIGHT {
+                    y -= 150.
+                }
+                let position = Vector::new(x, y);
 
                 font.draw(
                     gfx,

@@ -85,7 +85,7 @@ impl Core {
                 },
                 Stockpiles {
                     stockpiles,
-                    size: 1000,
+                    storage_capacity: 1000,
                 },
                 Shape {
                     shape: Ball::new(10.),
@@ -160,7 +160,7 @@ impl Core {
                 Velocity::default(),
                 Stockpiles {
                     stockpiles: Default::default(),
-                    size: 100,
+                    storage_capacity: 100,
                 },
             )
         }));
@@ -182,7 +182,7 @@ impl Core {
 
                 let current_stockpile =
                     *stockpiles.stockpiles.get(&produced_resource).unwrap_or(&0);
-                let new_stockpile = min(stockpiles.size, current_stockpile + 10);
+                let new_stockpile = min(stockpiles.storage_capacity, current_stockpile + 10);
                 stockpiles
                     .stockpiles
                     .insert(produced_resource, new_stockpile);
@@ -214,13 +214,13 @@ impl Core {
                     let food_amount = *stockpiles.stockpiles.get(&Food).unwrap_or(&0);
                     let food_selling_price = market_calculations::calculate_basic_selling_price(
                         food_amount,
-                        stockpiles.size,
+                        stockpiles.storage_capacity,
                         0,
                         0,
                     );
                     let food_buying_price = market_calculations::calculate_basic_buying_price(
                         food_amount,
-                        stockpiles.size,
+                        stockpiles.storage_capacity,
                         0,
                         0,
                     );
@@ -430,7 +430,9 @@ impl Core {
             for (uuid, stockpiles, docked) in
                 <(&Id, &Stockpiles, &Docked)>::query().iter(&self.world)
             {
-                for (station_id, _stockpiles) in <(&Id, &Stockpiles)>::query().iter(&self.world) {
+                for (station_id, position, _stockpiles) in
+                    <(&Id, &Position, &Stockpiles)>::query().iter(&self.world)
+                {
                     if docked.docked_at != station_id.uuid {
                         continue;
                     }
@@ -440,6 +442,7 @@ impl Core {
 
                     let ship_decision = ship::figure_out_what_to_do_at_station(
                         &station_id,
+                        &position.point,
                         ship_inventory,
                         &markets,
                     );

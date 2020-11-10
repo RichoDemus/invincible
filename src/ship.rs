@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
 use nalgebra::Point2;
-use rand::seq::IteratorRandom;
-use rand::Rng;
 use uuid::Uuid;
 
 use crate::components::{Resource, Stockpiles};
+use crate::market_calculations;
 use crate::market_calculations::MarketWithPosition;
 
 #[derive(Debug)]
@@ -17,48 +16,63 @@ pub enum ShipDecision {
 
 pub fn figure_out_what_to_do_in_space(
     _position: &Point2<f64>,
-    _ship_inventory: &Stockpiles,
+    ship_inventory: &Stockpiles,
     markets: &HashMap<Uuid, MarketWithPosition>,
 ) -> ShipDecision {
-    let mut rng = rand::thread_rng();
-    ShipDecision::TravelTo(
-        *markets
-            .keys()
-            .choose(&mut rng)
-            .expect("there should be a station here"),
-    )
+    if ship_inventory.space_left() < 1 {
+        //cargo full, lets go sell
+        let markets = markets.values().cloned().collect::<Vec<_>>();
+        let inventory = ship_inventory
+            .stockpiles
+            .iter()
+            .map(|(res, amount)| (*res, *amount))
+            .collect::<Vec<_>>();
+        let destination = market_calculations::calculate_where_to_sell_cargo(&inventory, markets);
+        let destination = destination.expect("No where to go");
+        ShipDecision::TravelTo(destination)
+    } else {
+        // cargo empty, lets buy
+        let markets = markets.values().cloned().collect::<Vec<_>>();
+        let destination = market_calculations::calculate_where_to_buy_frakking_food(markets);
+        let destination = destination.expect("No where to go");
+        ShipDecision::TravelTo(destination)
+    }
 }
 
 pub fn figure_out_what_to_do_at_station(
     station_id: &Uuid,
+    _station_position: &Point2<f64>,
     ship_inventory: &Stockpiles,
     markets: &HashMap<Uuid, MarketWithPosition>,
 ) -> ShipDecision {
-    let mut rng = rand::thread_rng();
-    if let Some(_station_stockpiles) = markets.get(station_id) {
-        if let Some((resource, amount)) = ship_inventory.stockpiles.iter().next() {
-            // sell something
-            if rng.gen_bool(0.5) {
-                ShipDecision::Sell(*resource, *amount)
-            } else {
-                ShipDecision::TravelTo(
-                    *markets
-                        .keys()
-                        .choose(&mut rng)
-                        .expect("there should be a station here"),
-                )
-            }
-        } else {
-            // ship empty but something
-            let resource_to_buy = Resource::Food; //todo dont hardcode
-            ShipDecision::Buy(resource_to_buy, 100)
+    let markets = markets.values().cloned().collect::<Vec<_>>();
+
+    // cargo full, sell here or go elsewhere?
+    if ship_inventory.space_left() < 1 {
+        let inventory = ship_inventory
+            .stockpiles
+            .iter()
+            .map(|(res, amount)| (*res, *amount))
+            .collect::<Vec<_>>();
+        let destination = market_calculations::calculate_where_to_sell_cargo(&inventory, markets);
+        let destination = destination.expect("No where to go");
+        if &destination != station_id {
+            // we wanna go elsewhere to sell
+            return ShipDecision::TravelTo(destination);
         }
-    } else {
-        ShipDecision::TravelTo(
-            *markets
-                .keys()
-                .choose(&mut rng)
-                .expect("there should be a station here"),
-        )
+
+        // sell here
+        return ShipDecision::Sell(Resource::Food, 100);
     }
+
+    // should we go somewhere else to buy?
+    let destination = market_calculations::calculate_where_to_buy_frakking_food(markets);
+    let destination = destination.expect("No where to go");
+
+    if &destination != station_id {
+        return ShipDecision::TravelTo(destination);
+    }
+
+    //buy here!
+    ShipDecision::Buy(Resource::Food, 100)
 }

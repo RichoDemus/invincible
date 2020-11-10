@@ -129,6 +129,50 @@ pub fn get_most_profitable_route(
     }
 }
 
+pub fn calculate_where_to_buy_frakking_food(markets: Vec<MarketWithPosition>) -> Option<Uuid> {
+    markets
+        .iter()
+        .map(|market| (market.id, market.food_sell_price))
+        .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
+            let left_sell_value: u64 = *left_sell_value;
+            let right_sell_value: &u64 = right_sell_value;
+            left_sell_value
+                .partial_cmp(right_sell_value)
+                .expect("couldn't unwrap ordering")
+        })
+        .next()
+        .map(|(id, _)| id)
+}
+
+pub fn calculate_where_to_sell_cargo(
+    inventory: &[(Resource, u64)],
+    markets: Vec<MarketWithPosition>,
+) -> Option<Uuid> {
+    markets
+        .iter()
+        .map(|market| {
+            let sell_prices = inventory
+                .iter()
+                .map(|(resource, amount)| {
+                    if resource != &Resource::Food {
+                        panic!("yadda yadda foood");
+                    }
+                    market.food_buy_price * amount
+                })
+                .sum();
+            (market.id, sell_prices)
+        })
+        .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
+            let left_sell_value: &u64 = left_sell_value;
+            let right_sell_value: u64 = *right_sell_value;
+            right_sell_value
+                .partial_cmp(left_sell_value)
+                .expect("couldn't unwrap ordering")
+        })
+        .next()
+        .map(|(id, _)| id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,5 +214,34 @@ mod tests {
 
         assert_eq!(result.source.0, source.id, "wrong source");
         assert_eq!(result.destination, destination.id, "wrong destination");
+    }
+
+    #[test]
+    fn test_calculate_where_to_sell_cargo() {
+        let inventory = vec![(Resource::Food, 10)];
+        let markets = vec![
+            MarketWithPosition {
+                id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+                position: Point2::new(20., 20.),
+                food_buy_price: 3,
+                food_sell_price: 4,
+            },
+            MarketWithPosition {
+                id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
+                position: Point2::new(30., 20.),
+                food_buy_price: 2,
+                food_sell_price: 4,
+            },
+        ];
+
+        let result = calculate_where_to_sell_cargo(&inventory, markets);
+
+        assert!(result.is_some());
+        if let Some(id) = result {
+            assert_eq!(
+                id,
+                Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
+            );
+        }
     }
 }

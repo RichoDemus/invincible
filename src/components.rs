@@ -49,7 +49,16 @@ pub struct NaturalResources {
 #[derive(Clone, Debug)]
 pub struct Stockpiles {
     pub stockpiles: HashMap<Resource, u64>,
-    pub size: u64,
+    pub storage_capacity: u64,
+}
+
+impl Stockpiles {
+    pub fn size(&self) -> u64 {
+        self.stockpiles.values().sum()
+    }
+    pub fn space_left(&self) -> u64 {
+        self.storage_capacity - self.size()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
