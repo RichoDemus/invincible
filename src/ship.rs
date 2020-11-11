@@ -15,7 +15,7 @@ pub enum ShipDecision {
 }
 
 pub fn figure_out_what_to_do_in_space(
-    _position: &Point2<f64>,
+    position: &Point2<f64>,
     ship_inventory: &Inventory,
     markets: &HashMap<Uuid, MarketWithPosition>,
 ) -> ShipDecision {
@@ -27,13 +27,15 @@ pub fn figure_out_what_to_do_in_space(
             .iter()
             .map(|(res, item)| (*res, *item))
             .collect::<Vec<_>>();
-        let destination = market_calculations::calculate_where_to_sell_cargo(&inventory, markets);
+        let destination =
+            market_calculations::calculate_where_to_sell_cargo(position, &inventory, markets);
         let destination = destination.expect("No where to go");
         ShipDecision::TravelTo(destination)
     } else {
         // cargo empty, lets buy
         let markets = markets.values().cloned().collect::<Vec<_>>();
-        let destination = market_calculations::calculate_where_to_buy_frakking_food(markets);
+        let destination =
+            market_calculations::calculate_where_to_buy_frakking_food(position, markets);
         let destination = destination.expect("No where to go");
         ShipDecision::TravelTo(destination)
     }
@@ -41,7 +43,7 @@ pub fn figure_out_what_to_do_in_space(
 
 pub fn figure_out_what_to_do_at_station(
     station_id: &Uuid,
-    _station_position: &Point2<f64>,
+    station_position: &Point2<f64>,
     ship_inventory: &Inventory,
     markets: &HashMap<Uuid, MarketWithPosition>,
 ) -> ShipDecision {
@@ -54,7 +56,11 @@ pub fn figure_out_what_to_do_at_station(
             .iter()
             .map(|(res, amount)| (*res, *amount))
             .collect::<Vec<_>>();
-        let destination = market_calculations::calculate_where_to_sell_cargo(&inventory, markets);
+        let destination = market_calculations::calculate_where_to_sell_cargo(
+            station_position,
+            &inventory,
+            markets,
+        );
         let destination = destination.expect("No where to go");
         if &destination != station_id {
             // we wanna go elsewhere to sell
@@ -66,7 +72,8 @@ pub fn figure_out_what_to_do_at_station(
     }
 
     // should we go somewhere else to buy?
-    let destination = market_calculations::calculate_where_to_buy_frakking_food(markets);
+    let destination =
+        market_calculations::calculate_where_to_buy_frakking_food(station_position, markets);
     let destination = destination.expect("No where to go");
 
     if &destination != station_id {

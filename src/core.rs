@@ -249,7 +249,7 @@ impl Core {
         {
             <(&mut Ship, &Position, &Inventory, &mut Destination)>::query().for_each_mut(
                 &mut self.world,
-                |(_ship, pos, stockpiles, destination): (
+                |(ship, pos, stockpiles, destination): (
                     &mut Ship,
                     &Position,
                     &Inventory,
@@ -263,7 +263,8 @@ impl Core {
                             destination.destination = Some((
                                 station,
                                 markets.get(&station).expect("asd station").position,
-                            ))
+                            ));
+                            ship.objective = ShipObjective::TravelTo(station);
                         }
                         ShipDecision::Buy(_, _) => panic!("Ships in space can't buy"),
                         ShipDecision::Sell(_, _) => panic!("Ships in space can't sell"),

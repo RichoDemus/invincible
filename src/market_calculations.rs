@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
@@ -129,22 +131,42 @@ pub fn get_most_profitable_route(
     }
 }
 
-pub fn calculate_where_to_buy_frakking_food(markets: Vec<MarketWithPosition>) -> Option<Uuid> {
+pub fn calculate_where_to_buy_frakking_food(
+    position: &Point2<f64>,
+    markets: Vec<MarketWithPosition>,
+) -> Option<Uuid> {
     markets
-        .iter()
-        .map(|market| (market.id, market.food_sell_price))
-        .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
-            let left_sell_value: u64 = *left_sell_value;
-            let right_sell_value: &u64 = right_sell_value;
-            left_sell_value
-                .partial_cmp(right_sell_value)
-                .expect("couldn't unwrap ordering")
-        })
-        .next()
-        .map(|(id, _)| id)
+        .into_iter()
+        .map(|market| (market.id, market.position, market.food_sell_price))
+        .fold1(
+            |(left_id, left_position, left_sell_price),
+             (right_id, right_position, right_sell_price)| {
+                match left_sell_price.cmp(&right_sell_price) {
+                    Ordering::Less => (left_id, left_position, left_sell_price),
+                    Ordering::Equal => (right_id, right_position, right_sell_price),
+                    Ordering::Greater => {
+                        // same sell price, go by distance
+                        let left_distance = position - left_position;
+                        let left_distance = left_distance.magnitude();
+
+                        let right_distance = position - right_position;
+                        let right_distance = right_distance.magnitude();
+
+                        // println!("Same sell price: {}, distances: {:?} {} {:?} {}", left_sell_price, left_id, left_distance, right_id, right_distance);
+                        if left_distance < right_distance {
+                            (left_id, left_position, left_sell_price)
+                        } else {
+                            (right_id, right_position, right_sell_price)
+                        }
+                    }
+                }
+            },
+        )
+        .map(|(id, _position, _sell_price)| id)
 }
 
 pub fn calculate_where_to_sell_cargo(
+    _position: &Point2<f64>,
     inventory: &[(Commodity, InventoryItem)],
     markets: Vec<MarketWithPosition>,
 ) -> Option<Uuid> {
@@ -240,7 +262,8 @@ mod tests {
             },
         ];
 
-        let result = calculate_where_to_sell_cargo(&inventory, markets);
+        // todo proper test with distance
+        let result = calculate_where_to_sell_cargo(&Point2::new(0., 0.), &inventory, markets);
 
         assert!(result.is_some());
         if let Some(id) = result {
