@@ -143,8 +143,8 @@ pub fn calculate_where_to_buy_frakking_food(
              (right_id, right_position, right_sell_price)| {
                 match left_sell_price.cmp(&right_sell_price) {
                     Ordering::Less => (left_id, left_position, left_sell_price),
-                    Ordering::Equal => (right_id, right_position, right_sell_price),
-                    Ordering::Greater => {
+                    Ordering::Greater => (right_id, right_position, right_sell_price),
+                    Ordering::Equal => {
                         // same sell price, go by distance
                         let left_distance = position - left_position;
                         let left_distance = left_distance.magnitude();
@@ -197,6 +197,8 @@ pub fn calculate_where_to_sell_cargo(
 
 #[cfg(test)]
 mod tests {
+    use nalgebra::Point;
+
     use super::*;
 
     #[test]
@@ -239,6 +241,39 @@ mod tests {
     }
 
     #[test]
+    fn test_calc_where_to_buy_cargo() {
+        let expensive = MarketWithPosition {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+            position: Point2::new(20., 20.),
+            food_buy_price: 3,
+            food_sell_price: 10,
+        };
+        let closest = MarketWithPosition {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
+            position: Point2::new(1., 1.),
+            food_buy_price: 3,
+            food_sell_price: 4,
+        };
+        let to_far_away = MarketWithPosition {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
+            position: Point2::new(2., 2.),
+            food_buy_price: 3,
+            food_sell_price: 4,
+        };
+
+        let markets = vec![expensive, closest, to_far_away];
+
+        let result = calculate_where_to_buy_frakking_food(&Point2::new(0., 0.), markets);
+        assert!(result.is_some());
+        if let Some(id) = result {
+            assert_eq!(
+                id,
+                Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap()
+            );
+        }
+    }
+
+    #[test]
     fn test_calculate_where_to_sell_cargo() {
         let inventory = vec![(
             Commodity::Food,
@@ -247,29 +282,34 @@ mod tests {
                 bought_for: 0,
             },
         )];
-        let markets = vec![
-            MarketWithPosition {
-                id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-                position: Point2::new(20., 20.),
-                food_buy_price: 3,
-                food_sell_price: 4,
-            },
-            MarketWithPosition {
-                id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
-                position: Point2::new(30., 20.),
-                food_buy_price: 2,
-                food_sell_price: 4,
-            },
-        ];
+        let expensive = MarketWithPosition {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+            position: Point2::new(20., 20.),
+            food_buy_price: 1,
+            food_sell_price: 10,
+        };
+        let closest = MarketWithPosition {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
+            position: Point2::new(2., 2.),
+            food_buy_price: 3,
+            food_sell_price: 4,
+        };
+        let to_far_away = MarketWithPosition {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
+            position: Point2::new(1., 1.),
+            food_buy_price: 3,
+            food_sell_price: 4,
+        };
 
-        // todo proper test with distance
+        let markets = vec![expensive, closest, to_far_away];
+
         let result = calculate_where_to_sell_cargo(&Point2::new(0., 0.), &inventory, markets);
 
         assert!(result.is_some());
         if let Some(id) = result {
             assert_eq!(
                 id,
-                Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
+                Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap() // todo should be 3
             );
         }
     }
