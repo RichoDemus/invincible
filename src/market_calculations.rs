@@ -246,6 +246,29 @@ pub fn calculate_where_to_sell_cargo(
         .map(|(id, _)| id)
 }
 
+pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_orders: Vec<&&SellOrder>) -> BuyOrder {
+    let mut amount_left = amount;
+    let some_order = sell_orders.first().expect("should be an order here");
+    let mut lowest_price = some_order.price;
+    let position = some_order.position;
+    for order in sell_orders.iter().sorted_by_key(|order| order.price) {
+        lowest_price = order.price;
+        amount_left = amount_left.saturating_sub(order.amount);
+        if amount_left < 1 {
+            break
+        }
+    }
+    BuyOrder {
+        id: Uuid::new_v4(),
+        commodity,
+        buyer,
+        location: Default::default(),
+        position,
+        amount,
+        price: lowest_price
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use nalgebra::Point;
@@ -375,5 +398,35 @@ mod tests {
                 uuid(22) // todo should be 20
             );
         }
+    }
+
+    #[test]
+    fn test_create_buy_order(){
+        let cheapest = &SellOrder {
+            id: Uuid::new_v4(),
+            commodity: Commodity::Food,
+            seller: Uuid::new_v4(),
+            location: Uuid::new_v4(),
+            position: Point2::new(0.,0.),
+            amount: 50,
+            price: 10,
+        };
+        let mid_tier = &SellOrder {
+            amount:100,
+            price: 20,
+            ..cheapest.clone()
+        };
+        let expensive = &SellOrder {
+            amount:100,
+            price: 30,
+            ..cheapest.clone()
+        };
+
+        let orders = vec![&cheapest, &mid_tier, &expensive];
+
+        let result = create_buy_order(100, Commodity::Food, uuid(0), orders);
+
+        assert_eq!(result.price, 20);
+        assert_eq!(result.amount, 100);
     }
 }

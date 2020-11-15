@@ -9,7 +9,7 @@ use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 use uuid::Uuid;
 
-use crate::ship::{Ship};
+use crate::ship::{Ship, ShipDecision};
 use crate::planet::Planet;
 use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
 
@@ -188,7 +188,12 @@ impl Core {
         }
 
         for ship in self.ships.values_mut() {
-            ship.tick_day(&buy_orders, &sell_orders);
+            let decision = ship.tick_day(&buy_orders, &sell_orders);
+            match decision {
+                ShipDecision::Buy(buy) => panic!(format!("Decision: {:?}", buy)),
+                ShipDecision::Sell(_) => {},
+                ShipDecision::Nothing => {},
+            }
         }
 
         // <(&NaturalResources, &mut Inventory)>::query().for_each_mut(
