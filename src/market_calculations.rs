@@ -38,6 +38,24 @@ impl Debug for BuyOrder {
             .finish()
     }
 }
+
+#[derive(Copy, Clone)]
+pub struct   SellOrder{
+    pub id: Uuid,
+    pub commodity: Commodity,
+    pub seller: Uuid,
+    pub amount: u64,
+    pub price: u64,
+}
+impl Debug for SellOrder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Sell")
+            .field("c", &self.commodity)
+            .field("a", &self.amount)
+            .field("p", &self.price)
+            .finish()
+    }
+}
 // }
 
 pub fn calculate_basic_selling_price(

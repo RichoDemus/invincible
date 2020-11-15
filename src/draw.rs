@@ -92,11 +92,12 @@ fn draw_selected_planet_info(gfx: &mut Graphics, core: &Core, font: &mut FontRen
                 // format!("FPS: {}", last_fps).as_str(),
                 // name.name.as_str(),
                 format!(
-                    "{}\nPop: {}\nStockpiles: {:?}\nFood (B/S): {:?}",
+                    "{}\nPop: {}\nStockpiles: {:?}\nFood: {:?}\nSell: {:?}",
                     planet.name,
                     planet.population,
                     planet.items.items,
                     planet.buy_orders,
+                    planet.sell_orders,
                 )
                     .as_str(),
                 Color::GREEN,
