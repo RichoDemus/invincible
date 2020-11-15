@@ -175,8 +175,20 @@ impl Core {
             return;
         }
 
+        let mut sell_orders= vec![];
+        let mut buy_orders= vec![];
         for planet in self.planets.values_mut() {
             planet.tick_day();
+            for sell_order in &planet.sell_orders {
+                sell_orders.push(sell_order);
+            }
+            for buy_order in &planet.buy_orders {
+                buy_orders.push(buy_order);
+            }
+        }
+
+        for ship in self.ships.values_mut() {
+            ship.tick_day(&buy_orders, &sell_orders);
         }
 
         // <(&NaturalResources, &mut Inventory)>::query().for_each_mut(

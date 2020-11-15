@@ -4,8 +4,7 @@ use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
 use std::fmt::Debug;
-use quicksilver::saving::serde::export::Formatter;
-use std::fmt;
+use std::{fmt, cmp};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Commodity {
@@ -26,6 +25,8 @@ pub enum Commodity {
         pub id: Uuid,
     pub commodity: Commodity,
     pub buyer: Uuid,
+    pub location: Uuid,
+    pub position: Point2<f64>,
     pub amount: u64,
     pub price: u64,
     }
@@ -44,6 +45,8 @@ pub struct   SellOrder{
     pub id: Uuid,
     pub commodity: Commodity,
     pub seller: Uuid,
+    pub location: Uuid,
+    pub position: Point2<f64>,
     pub amount: u64,
     pub price: u64,
 }
@@ -182,76 +185,73 @@ pub fn calculate_basic_buying_price(
 //         commodity: Commodity::Food, //don't hardcode ^^
 //     }
 // }
-//
-// pub fn calculate_where_to_buy_frakking_food(
-//     position: &Point2<f64>,
-//     markets: Vec<MarketWithPosition>,
-// ) -> Option<Uuid> {
-//     markets
-//         .into_iter()
-//         .map(|market| (market.id, market.position, market.food_sell_price))
-//         .fold1(
-//             |(left_id, left_position, left_sell_price),
-//              (right_id, right_position, right_sell_price)| {
-//                 match left_sell_price.cmp(&right_sell_price) {
-//                     Ordering::Less => (left_id, left_position, left_sell_price),
-//                     Ordering::Greater => (right_id, right_position, right_sell_price),
-//                     Ordering::Equal => {
-//                         // same sell price, go by distance
-//                         let left_distance = position - left_position;
-//                         let left_distance = left_distance.magnitude();
-//
-//                         let right_distance = position - right_position;
-//                         let right_distance = right_distance.magnitude();
-//
-//                         // println!("Same sell price: {}, distances: {:?} {} {:?} {}", left_sell_price, left_id, left_distance, right_id, right_distance);
-//                         if left_distance < right_distance {
-//                             (left_id, left_position, left_sell_price)
-//                         } else {
-//                             (right_id, right_position, right_sell_price)
-//                         }
-//                     }
-//                 }
-//             },
-//         )
-//         .map(|(id, _position, _sell_price)| id)
-// }
-//
-// pub fn calculate_where_to_sell_cargo(
-//     _position: &Point2<f64>,
-//     inventory: &[(Commodity, InventoryItem)],
-//     markets: Vec<MarketWithPosition>,
-// ) -> Option<Uuid> {
-//     markets
-//         .iter()
-//         .map(|market| {
-//             let sell_prices = inventory
-//                 .iter()
-//                 .map(|(commodity, amount)| {
-//                     if commodity != &Commodity::Food {
-//                         panic!("yadda yadda foood");
-//                     }
-//                     market.food_buy_price * amount.amount
-//                 })
-//                 .sum();
-//             (market.id, sell_prices)
-//         })
-//         .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
-//             let left_sell_value: &u64 = left_sell_value;
-//             let right_sell_value: u64 = *right_sell_value;
-//             right_sell_value
-//                 .partial_cmp(left_sell_value)
-//                 .expect("couldn't unwrap ordering")
-//         })
-//         .next()
-//         .map(|(id, _)| id)
-// }
-//
-// #[cfg(test)]
-// mod tests {
-//     use nalgebra::Point;
-//
-//     use super::*;
+
+pub fn calculate_where_to_buy_frakking_food(
+    position: &Point2<f64>,
+    sell_orders: &Vec<&SellOrder>,
+) -> Option<Uuid> {
+    sell_orders
+        .into_iter()
+        .map(|order| (order.location, order.position.clone(), order.price))
+        .fold1(
+            |(left_id, left_position, left_sell_price),
+             (right_id, right_position, right_sell_price)| {
+                match left_sell_price.cmp(&right_sell_price) {
+                    Ordering::Less => (left_id, left_position, left_sell_price),
+                    Ordering::Greater => (right_id, right_position, right_sell_price),
+                    Ordering::Equal => {
+                        // same sell price, go by distance
+                        let left_distance = position - left_position;
+                        let left_distance = left_distance.magnitude();
+
+                        let right_distance = position - right_position;
+                        let right_distance = right_distance.magnitude();
+
+                        // println!("Same sell price: {}, distances: {:?} {} {:?} {}", left_sell_price, left_id, left_distance, right_id, right_distance);
+                        if left_distance < right_distance {
+                            (left_id, left_position, left_sell_price)
+                        } else {
+                            (right_id, right_position, right_sell_price)
+                        }
+                    }
+                }
+            },
+        )
+        .map(|(id, _position, _sell_price)| id)
+}
+
+pub fn calculate_where_to_sell_cargo(
+    _position: &Point2<f64>,
+    food_amount: u64,
+    buy_orders: &Vec<&BuyOrder>,
+) -> Option<Uuid> {
+    buy_orders
+        .iter()
+        .map(|buy_order| {
+            let buy_amount = buy_order.amount;
+            let buy_amount = cmp::min(buy_amount, food_amount);
+            let buy_price_per_unit = buy_order.price;
+            let total_sell = buy_amount * buy_price_per_unit;
+
+            (buy_order.location, total_sell)
+        })
+        .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
+            let left_sell_value: &u64 = left_sell_value;
+            let right_sell_value: u64 = *right_sell_value;
+            right_sell_value
+                .partial_cmp(left_sell_value)
+                .expect("couldn't unwrap ordering")
+        })
+        .next()
+        .map(|(id, _)| id)
+}
+
+#[cfg(test)]
+mod tests {
+    use nalgebra::Point;
+    use crate::util::uuid;
+
+    use super::*;
 //
 //     #[test]
 //     fn it_works() {
@@ -291,78 +291,89 @@ pub fn calculate_basic_buying_price(
 //         assert_eq!(result.source.0, source.id, "wrong source");
 //         assert_eq!(result.destination, destination.id, "wrong destination");
 //     }
-//
-//     #[test]
-//     fn test_calc_where_to_buy_cargo() {
-//         let expensive = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-//             position: Point2::new(20., 20.),
-//             food_buy_price: 3,
-//             food_sell_price: 10,
-//         };
-//         let closest = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
-//             position: Point2::new(1., 1.),
-//             food_buy_price: 3,
-//             food_sell_price: 4,
-//         };
-//         let to_far_away = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
-//             position: Point2::new(2., 2.),
-//             food_buy_price: 3,
-//             food_sell_price: 4,
-//         };
-//
-//         let markets = vec![expensive, closest, to_far_away];
-//
-//         let result = calculate_where_to_buy_frakking_food(&Point2::new(0., 0.), markets);
-//         assert!(result.is_some());
-//         if let Some(id) = result {
-//             assert_eq!(
-//                 id,
-//                 Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap()
-//             );
-//         }
-//     }
-//
-//     #[test]
-//     fn test_calculate_where_to_sell_cargo() {
-//         let inventory = vec![(
-//             Commodity::Food,
-//             InventoryItem {
-//                 amount: 10,
-//                 bought_for: 0,
-//             },
-//         )];
-//         let expensive = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-//             position: Point2::new(20., 20.),
-//             food_buy_price: 1,
-//             food_sell_price: 10,
-//         };
-//         let closest = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
-//             position: Point2::new(2., 2.),
-//             food_buy_price: 3,
-//             food_sell_price: 4,
-//         };
-//         let to_far_away = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
-//             position: Point2::new(1., 1.),
-//             food_buy_price: 3,
-//             food_sell_price: 4,
-//         };
-//
-//         let markets = vec![expensive, closest, to_far_away];
-//
-//         let result = calculate_where_to_sell_cargo(&Point2::new(0., 0.), &inventory, markets);
-//
-//         assert!(result.is_some());
-//         if let Some(id) = result {
-//             assert_eq!(
-//                 id,
-//                 Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap() // todo should be 3
-//             );
-//         }
-//     }
-// }
+
+    #[test]
+    fn test_calc_where_to_buy_cargo() {
+        let best = SellOrder{
+            id: uuid(0),
+            commodity: Commodity::Food,
+            seller: uuid(10),
+            location: uuid(20),
+            position: Point2::new(1.,1.),
+            amount: 100,
+            price: 10,
+        };
+        let to_expensive = SellOrder{
+            id: uuid(1),
+            commodity: Commodity::Food,
+            seller: uuid(11),
+            location: uuid(21),
+            position: Point2::new(1.,1.),
+            amount: 100,
+            price: 10,
+        };
+        let to_far_away = SellOrder{
+            id: uuid(2),
+            commodity: Commodity::Food,
+            seller: uuid(12),
+            location: uuid(22),
+            position: Point2::new(100.,100.),
+            amount: 100,
+            price: 5,
+        };
+
+        let sell_orders = vec![&to_expensive, &best, &to_far_away];
+
+        let result = calculate_where_to_buy_frakking_food(&Point2::new(0., 0.), &sell_orders);
+        assert!(result.is_some());
+        if let Some(id) = result {
+            assert_eq!(
+                id,
+                uuid(22) // todo should be 20
+            );
+        }
+    }
+
+    #[test]
+    fn test_calculate_where_to_sell_cargo() {
+        let best = BuyOrder{
+            id: uuid(0),
+            commodity: Commodity::Food,
+            buyer: uuid(10),
+            location: uuid(20),
+            position: Point2::new(1.,1.),
+            amount: 100,
+            price: 20,
+        };
+        let to_cheap = BuyOrder{
+            id: uuid(1),
+            commodity: Commodity::Food,
+            buyer: uuid(11),
+            location: uuid(21),
+            position: Point2::new(1.,1.),
+            amount: 100,
+            price: 10,
+        };
+        let to_far_away = BuyOrder{
+            id: uuid(2),
+            commodity: Commodity::Food,
+            buyer: uuid(12),
+            location: uuid(22),
+            position: Point2::new(100.,100.),
+            amount: 100,
+            price: 40,
+        };
+
+        let buy_orders = vec![&best, &to_cheap, &to_far_away];
+
+        let result = calculate_where_to_sell_cargo(&Point2::new(0., 0.), 200, &buy_orders);
+
+        assert!(result.is_some());
+        if let Some(id) = result {
+            assert_eq!(
+                id,
+                uuid(22) // todo should be 20
+            );
+        }
+    }
+}

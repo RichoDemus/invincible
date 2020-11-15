@@ -133,6 +133,8 @@ fn update_market_orders(planet:&mut Planet) {
                     id: Uuid::new_v4(),
                     commodity: Commodity::Food,
                     buyer: planet.id,
+                    location: planet.id,
+                    position: planet.position.clone(),
                     amount: missing_food,
                     price: market_calculations::calculate_basic_buying_price(food_amount, desired_food, 0,0),
                 })
@@ -160,6 +162,8 @@ fn update_market_orders(planet:&mut Planet) {
                     id: Uuid::new_v4(),
                     commodity: Commodity::Food,
                     seller: planet.id,
+                    location: planet.id,
+                    position: planet.position.clone(),
                     amount: two_thirds_food,
                     price: market_calculations::calculate_basic_buying_price(food_amount, desired_food, 0,0),
                 })

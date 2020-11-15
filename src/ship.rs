@@ -6,10 +6,11 @@ use rand::prelude::StdRng;
 use rand::Rng;
 use uuid::Uuid;
 
-use crate::{HEIGHT, WIDTH};
+use crate::{HEIGHT, WIDTH, market_calculations};
 use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
-use crate::market_calculations::Commodity;
+use crate::market_calculations::{Commodity, BuyOrder, SellOrder};
 use crate::inventory::Inventory;
+use crate::planet::Planet;
 
 pub struct Ship {
     pub id: Uuid,
@@ -35,6 +36,33 @@ impl Ship {
             objective: ShipObjective::Idle,
             inventory: Inventory::with_capacity(100),
         }
+    }
+
+    pub fn tick_day(&mut self, buy_orders: &Vec<&BuyOrder>, sell_orders: &Vec<&SellOrder>) {
+        if self.inventory.space_left() < 1 {
+//         //cargo full, lets go sell
+
+
+        // let markets = markets.values().cloned().collect::<Vec<_>>();
+        // let inventory = ship_inventory
+        //     .contents
+        //     .iter()
+        //     .map(|(res, item)| (*res, *item))
+        //     .collect::<Vec<_>>();
+        let destination =
+            market_calculations::calculate_where_to_sell_cargo(&self.position, self.inventory.get(&Commodity::Food), buy_orders);
+        let destination = destination.expect("No where to go");
+            self.objective = ShipObjective::TravelTo(destination);
+    } else {
+//         // cargo empty, lets buy
+            let destination = market_calculations::calculate_where_to_buy_frakking_food(&self.position, sell_orders);
+            let destination = destination.expect("No where to go");
+            self.objective = ShipObjective::TravelTo(destination)
+//         let markets = markets.values().cloned().collect::<Vec<_>>();
+//         let destination =
+//             market_calculations::calculate_where_to_buy_frakking_food(&self.position, sell_orders);
+//         let destination = destination.expect("No where to go");
+    }
     }
 }
 
