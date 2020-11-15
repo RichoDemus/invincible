@@ -372,6 +372,14 @@ impl Core {
             return;
         }
 
+        // todo cache this
+        let position_lookup: HashMap<Uuid, Point2<f64>> = self.planets.iter()
+            .map(|(id, planet)|(id.clone(), planet.position))
+            .collect();
+
+        for ship in self.ships.values_mut() {
+            ship.tick(&position_lookup);
+        }
 
 
         // // todo remove

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nalgebra::Point2;
+use nalgebra::{Point2, Vector2};
 use ncollide2d::shape::Ball;
 use rand::prelude::StdRng;
 use rand::Rng;
@@ -16,6 +16,7 @@ pub struct Ship {
     pub id: Uuid,
     pub name: String,
     pub position: Point2<f64>,
+    pub velocity: Vector2<f64>,
     pub shape: Ball<f64>,
     pub selected: bool,
     pub objective: ShipObjective,
@@ -31,6 +32,7 @@ impl Ship {
             id,
             name: String::from(name),
             position: Point2::new(x, y),
+            velocity: Vector2::new(0.,0.),
             shape: Ball::new(2.),
             selected: false,
             objective: ShipObjective::Idle,
@@ -63,6 +65,24 @@ impl Ship {
 //             market_calculations::calculate_where_to_buy_frakking_food(&self.position, sell_orders);
 //         let destination = destination.expect("No where to go");
     }
+    }
+
+    pub fn tick(&mut self, position_lookup: &HashMap<Uuid, Point2<f64>>) {
+        match self.objective {
+            ShipObjective::TravelTo(destination) => {
+                let destination = position_lookup.get(&destination).expect("destination should exist");
+                            let vector: Vector2<f64> = destination - self.position;
+                            let vector = vector.normalize(); //maybe not needed here
+
+                            let new_velocity = self.velocity + vector;
+                            let new_velocity = new_velocity.normalize();
+                self.velocity = new_velocity;
+
+                            //todo move to separate thing:
+                            self.position += new_velocity;
+            }
+            ShipObjective::Idle => {}
+        }
     }
 }
 
