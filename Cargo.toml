@@ -5,7 +5,6 @@ authors = ["RichoDemus <git@richodemus.com>"]
 edition = "2018"
 
 [dependencies]
-legion = { version = "0.3.1", default-features = false, features = ["stdweb", "extended-tuple-impls"] }
 nalgebra = "0.23.0"
 rand = { version = "0.7.3", features = ["stdweb"] }
 quicksilver = { version = "0.4.0", default-features = true, features = ["stdweb"]}

@@ -11,14 +11,17 @@ use quicksilver::{
 use crate::core::Core;
 use crate::util::convert;
 
-mod components;
 mod core;
 mod draw;
-mod economy_components;
-mod market_calculations;
+// mod economy_components;
+// mod market_calculations;
 mod ship;
-mod ship_components;
+// mod ship_components;
 mod util;
+mod planet;
+mod market_calculations;
+mod selectability;
+mod inventory;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
 #[cfg(any(target_arch = "wasm32", debug_assertions))]
@@ -131,7 +134,7 @@ async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> 
         if draw_timer.exhaust().is_some() {
             gfx.clear(Color::BLACK);
 
-            draw::draw(&mut gfx, &core.world, zoom_scale, &mut font);
+            draw::draw(&mut gfx, zoom_scale, &mut font, &core);
 
             // let (drawables, predicted_orbit) = core.draw();
             // let num_bodies = drawables.len();
