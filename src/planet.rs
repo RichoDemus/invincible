@@ -82,10 +82,15 @@ impl Planet {
         }
 
         update_market_orders(self);
+        self.resolve_matching_buy_and_sell_orders()
     }
 
     pub fn days_until_starvation(&self) ->u64 {
         self.items.get(&Commodity::Food).checked_div(self.population).unwrap_or(0)
+    }
+
+    fn resolve_matching_buy_and_sell_orders(&mut self) {
+
     }
 }
 
@@ -185,6 +190,7 @@ fn calc_desired_food(pop:u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::uuid;
 
     #[test]
     fn should_not_have_buy_order_if_sufficient_food() {

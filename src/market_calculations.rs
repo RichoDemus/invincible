@@ -30,6 +30,34 @@ pub enum Commodity {
     pub amount: u64,
     pub price: u64,
     }
+// #[cfg(test)]
+// impl From<(Uuid, u64, u64)> for BuyOrder {
+//     fn from(from: (Uuid, u64, u64)) -> Self {
+//         BuyOrder {
+//             id: Default::default(),
+//             commodity: Commodity::Water,
+//             buyer: from.0,
+//             location: Default::default(),
+//             position: Point2::new(0.,0.),
+//             amount: from.1,
+//             price: from.2,
+//         }
+//     }
+// }
+#[cfg(test)]
+impl BuyOrder {
+    pub fn from(buyer:Uuid, amount: u64, price:u64) -> Self {
+        BuyOrder {
+            id: Default::default(),
+            commodity: Commodity::Water,
+            buyer,
+            location: Default::default(),
+            position: Point2::new(0.,0.),
+            amount,
+            price,
+        }
+    }
+}
 impl Debug for BuyOrder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Buy")
@@ -50,6 +78,37 @@ pub struct   SellOrder{
     pub amount: u64,
     pub price: u64,
 }
+
+// #[cfg(test)]
+// impl From<(Uuid, u64, u64)> for SellOrder {
+//     fn from(from: (Uuid, u64, u64)) -> Self {
+//         SellOrder {
+//             id: Default::default(),
+//             commodity: Commodity::Water,
+//             seller: from.0,
+//             location: Default::default(),
+//             position: Point2::new(0.,0.),
+//             amount: from.1,
+//             price: from.2,
+//         }
+//     }
+// }
+
+#[cfg(test)]
+impl SellOrder {
+    pub fn from(seller:Uuid, amount: u64, price:u64) -> Self {
+        SellOrder {
+            id: Default::default(),
+            commodity: Commodity::Water,
+            seller,
+            location: Default::default(),
+            position: Point2::new(0.,0.),
+            amount,
+            price,
+        }
+    }
+}
+
 impl Debug for SellOrder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Sell")
@@ -268,6 +327,8 @@ pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_ord
         price: lowest_price
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
