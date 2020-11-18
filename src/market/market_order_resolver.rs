@@ -35,6 +35,7 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
                 // println!("{:?} disc: {:?} {:?} disc: {:?}", left, std::mem::discriminant(&left), right, std::mem::discriminant(&right));
                 std::mem::discriminant(&left) != std::mem::discriminant(&right)
             })
+            .filter(|(_, order)|order.commodity() == new_order.commodity())
             .fold1(|(left_index, left_order), (right_index, right_order)| {
                 // println!("Folderino: {} {:?}  {} {:?}", left_index, left_order, right_index, right_order);
                 if left_order.price() < right_order.price() {
@@ -52,10 +53,6 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
 
         // we have matching orders
         let (best_order_index, best_order) = maybe_best_order.unwrap();
-
-        if best_order.commodity() != new_order.commodity() {
-            panic!("Opps, only support food buy orders for now");
-        }
 
         let amount_to_transfer = cmp::min(best_order.amount(), new_order.amount());
         if amount_to_transfer == 0 {
