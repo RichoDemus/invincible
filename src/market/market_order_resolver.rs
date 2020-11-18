@@ -30,10 +30,8 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
     loop {
         let maybe_best_order = old_orders.iter_mut().enumerate()
             .filter(|(_, order)| {
-                let left: MarketOrder = **order;
-                let right: MarketOrder = new_order;
                 // println!("{:?} disc: {:?} {:?} disc: {:?}", left, std::mem::discriminant(&left), right, std::mem::discriminant(&right));
-                std::mem::discriminant(&left) != std::mem::discriminant(&right)
+                std::mem::discriminant(*order) != std::mem::discriminant(&new_order)
             })
             .filter(|(_, order)|order.commodity() == new_order.commodity())
             .fold1(|(left_index, left_order), (right_index, right_order)| {
@@ -68,7 +66,7 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
         if buyer_price < seller_price {
             // the highest buy price is lower than the lowest sell price
             old_orders.push(new_order);
-            return (old_orders, vec![]);
+            return (old_orders, transactions);
         }
 
         new_order.reduce_amount(amount_to_transfer);
