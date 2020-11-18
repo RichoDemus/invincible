@@ -1,10 +1,10 @@
+use std::{cmp, fmt};
 use std::cmp::Ordering;
+use std::fmt::Debug;
 
 use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
-use std::fmt::Debug;
-use std::{fmt, cmp};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Commodity {
@@ -12,38 +12,50 @@ pub enum Commodity {
 }
 
 
-// pub enum MarketOrder {
-//     SellOrder{
-//         id: Uuid,
-//         commodity: Commodity,
-//         seller: Uuid,
-//         amount: u64,
-//         price: u64,
-//     },
-#[derive(Copy, Clone)]
- pub struct   BuyOrder{
-        pub id: Uuid,
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum MarketOrder {
+    BuyOrder(BuyOrder),
+    SellOrder(SellOrder)
+}
+
+impl MarketOrder {
+    pub fn price(&self) -> u64 {
+        match self {
+            MarketOrder::BuyOrder(order) => order.price,
+            MarketOrder::SellOrder(order) => order.price,
+        }
+    }
+    pub fn amount(&self) -> u64 {
+        match self {
+            MarketOrder::BuyOrder(order) => order.amount,
+            MarketOrder::SellOrder(order) => order.amount,
+        }
+    }
+    pub fn commodity(&self) -> Commodity {
+        match self {
+            MarketOrder::BuyOrder(order) => order.commodity,
+            MarketOrder::SellOrder(order) => order.commodity,
+        }
+    }
+    pub fn reduce_amount(&mut self, amount:u64) {
+        match self {
+            MarketOrder::BuyOrder(order) => order.amount -= amount,
+            MarketOrder::SellOrder(order) => order.amount -= amount,
+        }
+    }
+}
+
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct BuyOrder {
+    pub id: Uuid,
     pub commodity: Commodity,
     pub buyer: Uuid,
     pub location: Uuid,
     pub position: Point2<f64>,
     pub amount: u64,
     pub price: u64,
-    }
-// #[cfg(test)]
-// impl From<(Uuid, u64, u64)> for BuyOrder {
-//     fn from(from: (Uuid, u64, u64)) -> Self {
-//         BuyOrder {
-//             id: Default::default(),
-//             commodity: Commodity::Water,
-//             buyer: from.0,
-//             location: Default::default(),
-//             position: Point2::new(0.,0.),
-//             amount: from.1,
-//             price: from.2,
-//         }
-//     }
-// }
+}
 #[cfg(test)]
 impl BuyOrder {
     pub fn from(buyer:Uuid, amount: u64, price:u64) -> Self {
@@ -68,7 +80,7 @@ impl Debug for BuyOrder {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct   SellOrder{
     pub id: Uuid,
     pub commodity: Commodity,
@@ -333,9 +345,11 @@ pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_ord
 #[cfg(test)]
 mod tests {
     use nalgebra::Point;
+
     use crate::util::uuid;
 
     use super::*;
+
 //
 //     #[test]
 //     fn it_works() {
