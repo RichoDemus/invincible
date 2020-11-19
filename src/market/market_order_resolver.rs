@@ -96,10 +96,11 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
 mod tests {
     use super::*;
     use crate::util::uuid;
+    use nalgebra::Point2;
 
     #[test]
     fn test_no_orders() {
-        let (unresolved_orders, transactions) = resolve_orders(vec![], MarketOrder::SellOrder(SellOrder::from(uuid(0), 100, 10)));
+        let (unresolved_orders, transactions) = resolve_orders(vec![], SellOrder::from(uuid(0), 100, 10));
         assert_eq!(unresolved_orders.len(), 1,"invalid unresolved orders");
         assert!(transactions.is_empty(), "invalid transactions");
     }
@@ -107,9 +108,9 @@ mod tests {
     #[test]
     fn should_not_do_anything_if_no_orders_match() {
         let old_orders = vec![
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 100, 9)),
+            BuyOrder::from(uuid(1), 100, 9),
         ];
-        let new_order = MarketOrder::SellOrder(SellOrder::from(uuid(0), 100, 10));
+        let new_order = SellOrder::from(uuid(0), 100, 10);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
@@ -117,13 +118,12 @@ mod tests {
         assert!(transactions.is_empty(), "invalid transactions");
     }
 
-
     #[test]
     fn should_return_one_transaction_for_basic_case() {
         let old_orders = vec![
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 100, 10)),
+            BuyOrder::from(uuid(1), 100, 10),
         ];
-        let new_order = MarketOrder::SellOrder(SellOrder::from(uuid(0), 100, 10));
+        let new_order = SellOrder::from(uuid(0), 100, 10);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
@@ -132,57 +132,68 @@ mod tests {
     }
 
     #[test]
+    fn should_only_resolve_orders_for_same_commodity() {
+        let old_order = BuyOrder::from_w_commodity(uuid(1), 100, 10, Commodity::Water);
+        let new_order = SellOrder::from_w_commodity(uuid(0), 100, 10, Commodity::Food);
+
+        let (unresolved_orders, transactions) = resolve_orders(vec![old_order], new_order);
+
+        assert_eq!(unresolved_orders, vec![old_order, new_order],"invalid unresolved orders");
+        assert!(transactions.is_empty(), "invalid transactions");
+    }
+
+    #[test]
     fn should_pick_oldest_order_if_same_price() {
         let old_orders = vec![
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 100, 10)),
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(2), 100, 10)),
+            BuyOrder::from(uuid(1), 100, 10),
+            BuyOrder::from(uuid(2), 100, 10),
         ];
-        let new_order = MarketOrder::SellOrder(SellOrder::from(uuid(0), 100, 10));
+        let new_order = SellOrder::from(uuid(0), 100, 10);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
-        assert_eq!(unresolved_orders, vec![MarketOrder::BuyOrder(BuyOrder::from(uuid(2), 100, 10))],"invalid unresolved orders");
+        assert_eq!(unresolved_orders, vec![BuyOrder::from(uuid(2), 100, 10)],"invalid unresolved orders");
         assert_eq!(transactions, vec![Transaction::from(uuid(0), uuid(1), 100, 10)], "invalid transactions");
     }
 
     #[test]
     fn should_partially_consume_existing_order() {
         let old_orders = vec![
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 100, 10)),
+            BuyOrder::from(uuid(1), 100, 10),
         ];
-        let new_order = MarketOrder::SellOrder(SellOrder::from(uuid(0), 50, 10));
+        let new_order = SellOrder::from(uuid(0), 50, 10);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
-        assert_eq!(unresolved_orders, vec![MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 50, 10))],"invalid unresolved orders");
+        assert_eq!(unresolved_orders, vec![BuyOrder::from(uuid(1), 50, 10)],"invalid unresolved orders");
         assert_eq!(transactions, vec![Transaction::from(uuid(0), uuid(1), 50, 10)], "invalid transactions");
     }
 
     #[test]
     fn should_partially_consume_new_order() {
         let old_orders = vec![
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 50, 10)),
+            BuyOrder::from(uuid(1), 50, 10),
         ];
-        let new_order = MarketOrder::SellOrder(SellOrder::from(uuid(0), 100, 10));
+        let new_order = SellOrder::from(uuid(0), 100, 10);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
-        assert_eq!(unresolved_orders, vec![MarketOrder::SellOrder(SellOrder::from(uuid(0), 50, 10))],"invalid unresolved orders");
+        assert_eq!(unresolved_orders, vec![SellOrder::from(uuid(0), 50, 10)],"invalid unresolved orders");
         assert_eq!(transactions, vec![Transaction::from(uuid(0), uuid(1), 50, 10)], "invalid transactions");
     }
 
     #[test]
     fn should_consume_multiple_orders_to_satisfy_new_order() {
         let old_orders = vec![
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(0), 10, 10)),
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(1), 20, 9)),
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(0), 10, 9)),
+            BuyOrder::from(uuid(0), 10, 10),
+            BuyOrder::from(uuid(1), 20, 9),
+            BuyOrder::from(uuid(0), 10, 9),
         ];
-        let new_order = MarketOrder::SellOrder(SellOrder::from(uuid(2), 35, 5));
+        let new_order = SellOrder::from(uuid(2), 35, 5);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
-        assert_eq!(unresolved_orders, vec![MarketOrder::BuyOrder(BuyOrder::from(uuid(0), 5, 9))],"invalid unresolved orders");
+        assert_eq!(unresolved_orders, vec![BuyOrder::from(uuid(0), 5, 9)],"invalid unresolved orders");
         assert_eq!(transactions, vec![
             Transaction::from(uuid(2), uuid(0), 10, 10),
             Transaction::from(uuid(2), uuid(1), 20, 9),
@@ -193,18 +204,18 @@ mod tests {
     #[test]
     fn should_consume_multiple_orders_until_prices_no_longer_compatible() {
         let old_orders = vec![
-            MarketOrder::SellOrder(SellOrder::from(uuid(0), 10, 10)),
-            MarketOrder::SellOrder(SellOrder::from(uuid(1), 10, 11)),
-            MarketOrder::SellOrder(SellOrder::from(uuid(2), 10, 12)),
-            MarketOrder::SellOrder(SellOrder::from(uuid(3), 10, 13)),
+            SellOrder::from(uuid(0), 10, 10),
+            SellOrder::from(uuid(1), 10, 11),
+            SellOrder::from(uuid(2), 10, 12),
+            SellOrder::from(uuid(3), 10, 13),
         ];
-        let new_order = MarketOrder::BuyOrder(BuyOrder::from(uuid(10), 100, 12));
+        let new_order = BuyOrder::from(uuid(10), 100, 12);
 
         let (unresolved_orders, transactions) = resolve_orders(old_orders, new_order);
 
         assert_eq!(unresolved_orders, vec![
-            MarketOrder::SellOrder(SellOrder::from(uuid(3), 10, 13)),
-            MarketOrder::BuyOrder(BuyOrder::from(uuid(10), 70, 12)),
+            SellOrder::from(uuid(3), 10, 13),
+            BuyOrder::from(uuid(10), 70, 12),
         ],"invalid unresolved orders");
         assert_eq!(transactions, vec![
             Transaction::from(uuid(0), uuid(10), 10, 10),

@@ -65,8 +65,8 @@ pub struct BuyOrder {
 }
 #[cfg(test)]
 impl BuyOrder {
-    pub fn from(buyer:Uuid, amount: u64, price:u64) -> Self {
-        BuyOrder {
+    pub fn from(buyer:Uuid, amount: u64, price:u64) -> MarketOrder {
+        MarketOrder::BuyOrder(BuyOrder {
             id: Default::default(),
             commodity: Commodity::Water,
             buyer,
@@ -74,7 +74,18 @@ impl BuyOrder {
             position: Point2::new(0.,0.),
             amount,
             price,
-        }
+        })
+    }
+    pub fn from_w_commodity(buyer:Uuid, amount: u64, price:u64, commodity:Commodity) -> MarketOrder {
+        MarketOrder::BuyOrder(BuyOrder {
+            id: Default::default(),
+            commodity,
+            buyer,
+            location: Default::default(),
+            position: Point2::new(0.,0.),
+            amount,
+            price,
+        })
     }
 }
 impl Debug for BuyOrder {
@@ -115,8 +126,8 @@ pub struct   SellOrder{
 
 #[cfg(test)]
 impl SellOrder {
-    pub fn from(seller:Uuid, amount: u64, price:u64) -> Self {
-        SellOrder {
+    pub fn from(seller:Uuid, amount: u64, price:u64) -> MarketOrder {
+        MarketOrder::SellOrder(SellOrder {
             id: Default::default(),
             commodity: Commodity::Water,
             seller,
@@ -124,7 +135,18 @@ impl SellOrder {
             position: Point2::new(0.,0.),
             amount,
             price,
-        }
+        })
+    }
+    pub fn from_w_commodity(seller:Uuid, amount: u64, price:u64, commodity :Commodity) -> MarketOrder {
+        MarketOrder::SellOrder(SellOrder {
+            id: Default::default(),
+            commodity,
+            seller,
+            location: Default::default(),
+            position: Point2::new(0.,0.),
+            amount,
+            price,
+        })
     }
 }
 
