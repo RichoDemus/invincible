@@ -18,7 +18,7 @@ impl Transaction {
         Transaction {
             seller,
             buyer,
-            commodity: Commodity::Food,
+            commodity: Commodity::Water,
             amount,
             price
         }
@@ -44,7 +44,7 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
             });
 
         if maybe_best_order.is_none() {
-            // no order of the oposite type at all
+            // no order of the opposite type at all
             // println!("No more orders of the opposite type left");
             old_orders.push(new_order);
             return (old_orders, transactions);
@@ -77,7 +77,7 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
         transactions.push(Transaction{
             seller,
             buyer,
-            commodity: Commodity::Food,
+            commodity: new_order.commodity(),
             amount: amount_to_transfer,
             price: best_order.price(), // take the price most beneficial to owner of new order
         });
@@ -96,8 +96,6 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
 mod tests {
     use super::*;
     use crate::util::uuid;
-    use std::cmp::Ordering;
-    use itertools::Itertools;
 
     #[test]
     fn test_no_orders() {
