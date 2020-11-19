@@ -43,6 +43,13 @@ impl MarketOrder {
             MarketOrder::SellOrder(order) => order.amount -= amount,
         }
     }
+    pub fn is_other_price_better(&self, other: &MarketOrder) -> bool {
+        match (self, other) {
+            (MarketOrder::BuyOrder(left_order), MarketOrder::BuyOrder(right_order)) => left_order.price < right_order.price,
+            (MarketOrder::SellOrder(left_order), MarketOrder::SellOrder(right_order)) => left_order.price > right_order.price,
+            _ => panic!("Tried to do price comparison of orders of different types"),
+        }
+    }
 }
 
 
