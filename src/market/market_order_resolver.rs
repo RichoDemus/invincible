@@ -96,7 +96,6 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
 mod tests {
     use super::*;
     use crate::util::uuid;
-    use nalgebra::Point2;
 
     #[test]
     fn test_no_orders() {
