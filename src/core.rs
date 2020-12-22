@@ -8,10 +8,14 @@ use ncollide2d::shape::Ball;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 use uuid::Uuid;
+use quicksilver::log;
 
 use crate::ship::{Ship, ShipDecision};
 use crate::planet::Planet;
 use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
+use crate::market_calculations::MarketOrder;
+use crate::projections;
+use crate::projections::{add_id_name_mapping, id_to_name};
 
 pub struct Core {
     pub ships: HashMap<Uuid, Ship>,
@@ -57,117 +61,50 @@ impl Core {
         ];
 
         let mut rng = StdRng::seed_from_u64(0);
-        for _ in 0..10 {
-            let id= Uuid::new_v4();
-            let planet = Planet::random(id, &mut names, &mut rng);
-            self.planets.insert(id, planet);
+
+        let planets = vec![
+                Planet {
+                    name: "Foodsies".to_owned(),
+                    water: true,
+                    position: Point2::new(400., 400.),
+                    population: 5,
+                    ..Planet::default()
+                },
+                Planet {
+                    name: "Biggo".to_owned(),
+                    water: false,
+                    position: Point2::new(600., 400.),
+                    population: 5,
+                    ..Planet::default()
+                },
+                Planet {
+                    name: "Smallo".to_owned(),
+                    water: false,
+                    position: Point2::new(500., 600.),
+                    population: 1,
+                    ..Planet::default()
+                },
+        ];
+
+        for planet in planets {
+                add_id_name_mapping(planet.id, planet.name.clone());
+                self.planets.insert(planet.id, planet);
         }
+
+        // for _ in 0..10 {
+        //     let id= Uuid::new_v4();
+        //     let planet = Planet::random(id, &mut names, &mut rng);
+        //     add_id_name_mapping(id, planet.name.clone());
+        //     self.planets.insert(id, planet);
+        // }
 
         for _ in 0..1 {
             let id = Uuid::new_v4();
-            self.ships.insert(id, Ship::random(id, &mut vec!["Wayfarer"], &mut rng));
+            let ship = Ship::random(id, &mut vec!["Wayfarer"], &mut rng);
+            add_id_name_mapping(id, ship.name.clone());
+            self.ships.insert(id, ship);
         }
 
-        // self.world.extend((0..10).map(|_| {
-        //     let x = rng.gen_range(0., WIDTH as f64);
-        //     let y = rng.gen_range(0., HEIGHT as f64);
-        //     let name = names.pop().expect("no more planet names");
-        //     (
-        //         Id::default(),
-        //         Name {
-        //             name: String::from(name),
-        //         },
-        //         Planet {},
-        //         Position {
-        //             point: Point2::new(x, y),
-        //         },
-        //         Inventory {
-        //             contents: vec![(
-        //                 Commodity::Food,
-        //                 InventoryItem {
-        //                     amount: 1000,
-        //                     bought_for: 0,
-        //                 },
-        //             )],
-        //             storage_capacity: 1000,
-        //         },
-        //         Shape {
-        //             shape: Ball::new(10.),
-        //         },
-        //         Selectable,
-        //         Population {
-        //             population: rng.gen_range(1, 10),
-        //         },
-        //         Market::default(),
-        //     )
-        // }));
-
-        // add natural resources to some planets
-        // {
-        //     let mut entites = vec![];
-        //     for chunk in <&mut Planet>::query().iter_chunks_mut(&mut self.world) {
-        //         // println!(
-        //         //     "the entities in the chunk have {:?} components",
-        //         //     chunk.archetype().layout().component_types(),
-        //         // );
-        //         for (entity, _) in chunk.into_iter_entities() {
-        //             entites.push(entity);
-        //         }
-        //     }
-        //
-        //     for entity in entites {
-        //         if let Some(mut entry) = self.world.entry(entity) {
-        //             // access information about the entity's archetype
-        //             // println!("{:?} has {:?}", entity, entry.archetype().layout().component_types());
-        //
-        //             // add an extra component
-        //             if rng.gen_range(0, 4) == 0 {
-        //                 entry.add_component(NaturalResources {
-        //                     resource: Commodity::Water,
-        //                 });
-        //             }
-        //             // add an extra component
-        //             // else if rng.gen_range(0, 3) == 0 {
-        //             //     entry.add_component(NaturalResources {
-        //             //         resource: resource::Hydrogen,
-        //             //     });
-        //             // }
-        //         }
-        //     }
-        //
-        //     // let planets = <&Planet>::query().iter(&self.world).count();
-        //     // let natural_resources = <&NaturalResources>::query().iter(&self.world).count();
-        //
-        //     // panic!(format!("There are {} planets and {} natural resources", planets, natural_resources))
-        // }
-
-        // add ships
-        // self.world.extend((0..1).map(|_| {
-        //     (
-        //         Id::default(),
-        //         Ship {
-        //             objective: Idle,
-        //             max_speed: 1.,
-        //         },
-        //         Name {
-        //             name: String::from("Wayfarer"),
-        //         },
-        //         Position {
-        //             point: Point2::new(200., 200.),
-        //         },
-        //         Shape {
-        //             shape: Ball::new(2.),
-        //         },
-        //         Selectable,
-        //         Selected,
-        //         Destination { destination: None },
-        //         Velocity::default(),
-        //         Inventory {
-        //             contents: Default::default(),
-        //             storage_capacity: 100,
-        //         },
-        //     )
-        // }));
     }
 
     pub fn tick_day(&mut self) {
@@ -175,201 +112,67 @@ impl Core {
             return;
         }
 
-        let mut sell_orders= vec![];
-        let mut buy_orders= vec![];
+        let mut transactions = vec![];
         for planet in self.planets.values_mut() {
-            planet.tick_day();
-            for sell_order in &planet.sell_orders {
-                sell_orders.push(sell_order);
-            }
-            for buy_order in &planet.buy_orders {
-                buy_orders.push(buy_order);
-            }
+            let mut new_transactions = planet.tick_day();
+            transactions.append(&mut new_transactions);
+
         }
 
+        for transaction in transactions {
+            // todo do this with fancy market_actor trait?
+            match (self.planets.get_mut(&transaction.seller), self.ships.get_mut(&transaction.seller)) {
+                (Some(seller), None) => seller.items.remove(transaction.commodity, transaction.amount),
+                (None, Some(seller)) => seller.inventory.remove(transaction.commodity, transaction.amount),
+                _ => panic!("no seller for transaction: {:?}", transaction),
+            };
+
+            match (self.planets.get_mut(&transaction.buyer), self.ships.get_mut(&transaction.buyer)) {
+                (Some(buyer), None) => buyer.items.add(transaction.commodity, transaction.amount),
+                (None, Some(buyer)) => buyer.inventory.add(transaction.commodity, transaction.amount),
+                _ => panic!("no buyer for transaction: {:?}", transaction),
+            };
+
+        }
+
+        let market_orders = self.planets.values().flat_map(|planet|planet.market_orders.clone()).collect::<Vec<_>>();
+
+
+        let mut transactions = vec![];
         for ship in self.ships.values_mut() {
-            let decision = ship.tick_day(&buy_orders, &sell_orders);
+            let decision = ship.tick_day(&market_orders);
+            println!("Ship {} decided: {:?}", ship.name, decision);
             match decision {
-                ShipDecision::Buy(buy) => panic!(format!("Decision: {:?}", buy)),
-                ShipDecision::Sell(_) => {},
+                ShipDecision::Buy(buy) => {
+                    log::info!("{} put buy order {:?}", ship.name, buy);
+                    let mut new_transactions = self.planets.get_mut(&buy.location).expect("Should be a planet here").add_and_process_market_order(MarketOrder::BuyOrder(buy));
+                    transactions.append(&mut new_transactions);
+                },
+                ShipDecision::Sell(sell) => {
+                    println!("Put sell order {:?}", sell);
+                    let mut new_transactions = self.planets.get_mut(&sell.location).expect("Should be a planet here").add_and_process_market_order(MarketOrder::SellOrder(sell));
+                    transactions.append(&mut new_transactions);
+                },
                 ShipDecision::Nothing => {},
             }
         }
 
-        // <(&NaturalResources, &mut Inventory)>::query().for_each_mut(
-        //     &mut self.world,
-        //     |(natural_resources, stockpiles): (&NaturalResources, &mut Inventory)| {
-        //         let produced_resource = match &natural_resources.resource {
-        //             Commodity::Water => Commodity::Food,
-        //             Commodity::Hydrogen => Commodity::Fuel,
-        //             other => panic!(format!("Unhandled natural resource: {:?}", other)),
-        //         };
-        //
-        //         stockpiles.add(produced_resource, 10, 0);
-        //     },
-        // );
-        //
-        // // pop eats food
-        // <(&mut Inventory, &mut Population)>::query().for_each_mut(
-        //     &mut self.world,
-        //     |(stockpiles, population): (&mut Inventory, &mut Population)| {
-        //         let current_food = stockpiles.get_amount(&Commodity::Food);
-        //
-        //         if current_food < 1 {
-        //             //starvation
-        //             population.population = population.population.saturating_sub(1);
-        //         } else {
-        //             stockpiles.remove(&Commodity::Food, population.population);
-        //         }
-        //     },
-        // );
-        //
-        // //calculate prices
-        // {
-        //     <(&Inventory, &mut Market)>::query().for_each_mut(
-        //         &mut self.world,
-        //         |(inventory, market): (&Inventory, &mut Market)| {
-        //             let food_amount = inventory.get_amount(&Commodity::Food);
-        //             let food_selling_price = market_calculations::calculate_basic_selling_price(
-        //                 food_amount,
-        //                 inventory.storage_capacity,
-        //                 0,
-        //                 0,
-        //             );
-        //             let food_buying_price = market_calculations::calculate_basic_buying_price(
-        //                 food_amount,
-        //                 inventory.storage_capacity,
-        //                 0,
-        //                 0,
-        //             );
-        //             market.food_buy_price = food_buying_price;
-        //             market.food_sell_price = food_selling_price;
-        //         },
-        //     );
-        // }
-        //
-        // let position_lookup: HashMap<Uuid, Point2<f64>> = <(&Id, &Position)>::query()
-        //     .iter(&self.world)
-        //     .map(|(id, position)| (id.uuid, position.point))
-        //     .collect();
-        //
-        // let markets: HashMap<Uuid, MarketWithPosition> = <(&Market, &Position, &Id)>::query()
-        //     .iter(&self.world)
-        //     .map(|(market, position, id)| {
-        //         (
-        //             id.uuid,
-        //             MarketWithPosition {
-        //                 id: id.uuid,
-        //                 position: position.point,
-        //                 food_buy_price: market.food_buy_price,
-        //                 food_sell_price: market.food_sell_price,
-        //             },
-        //         )
-        //     })
-        //     .collect();
-        //
-        // // Figure out something for ships in space to do
-        // {
-        //     <(&mut Ship, &Position, &Inventory, &mut Destination)>::query().for_each_mut(
-        //         &mut self.world,
-        //         |(ship, pos, stockpiles, destination): (
-        //             &mut Ship,
-        //             &Position,
-        //             &Inventory,
-        //             &mut Destination,
-        //         )| {
-        //             let decision =
-        //                 ship::figure_out_what_to_do_in_space(&pos.point, stockpiles, &markets);
-        //             println!("Space decision: {:?}", decision);
-        //             match decision {
-        //                 ShipDecision::TravelTo(station) => {
-        //                     destination.destination = Some((
-        //                         station,
-        //                         markets.get(&station).expect("asd station").position,
-        //                     ));
-        //                     ship.objective = ShipObjective::TravelTo(station);
-        //                 }
-        //                 ShipDecision::Buy(_, _) => panic!("Ships in space can't buy"),
-        //                 ShipDecision::Sell(_, _) => panic!("Ships in space can't sell"),
-        //             }
-        //         },
-        //     );
-        // }
-        //
-        // // Figure out something for docked ships to do
-        // {
-        //     let mut travel_from_station_orders = vec![];
-        //     let mut buy_orders = vec![];
-        //     let mut sell_orders = vec![];
-        //     for (uuid, stockpiles, docked) in
-        //         <(&Id, &Inventory, &Docked)>::query().iter(&self.world)
-        //     {
-        //         for (station_id, position, _stockpiles) in
-        //             <(&Id, &Position, &Inventory)>::query().iter(&self.world)
-        //         {
-        //             if docked.docked_at != station_id.uuid {
-        //                 continue;
-        //             }
-        //             let ship_id = uuid.uuid;
-        //             let station_id = station_id.uuid;
-        //             let ship_inventory = stockpiles;
-        //
-        //             let ship_decision = ship::figure_out_what_to_do_at_station(
-        //                 &station_id,
-        //                 &position.point,
-        //                 ship_inventory,
-        //                 &markets,
-        //             );
-        //             match ship_decision {
-        //                 ShipDecision::TravelTo(uuid) => {
-        //                     travel_from_station_orders.push((ship_id, uuid))
-        //                 }
-        //                 ShipDecision::Buy(resource, amount) => {
-        //                     buy_orders.push((ship_id, station_id, resource, amount))
-        //                 }
-        //                 ShipDecision::Sell(resource, amount) => {
-        //                     sell_orders.push((ship_id, station_id, resource, amount))
-        //                 }
-        //             }
-        //         }
-        //     }
-        //
-        //     println!("Leaves: {:?}", travel_from_station_orders);
-        //     println!("buys: {:?}", buy_orders);
-        //     println!("sells: {:?}", sell_orders);
-        //     // we know what ships want to do, execute it!
-        //     undock_ships(
-        //         travel_from_station_orders,
-        //         &position_lookup,
-        //         &mut self.world,
-        //     );
-        //
-        //     //process market orders
-        //     for (id, inventory) in <(&Id, &mut Inventory)>::query().iter_mut(&mut self.world) {
-        //         let inventory: &mut Inventory = inventory;
-        //         for (ship_id, station_id, resource, amount) in &buy_orders {
-        //             let stockpile_id = id.uuid;
-        //             if ship_id == &stockpile_id {
-        //                 inventory.add(*resource, *amount, 0);
-        //             }
-        //             if station_id == &stockpile_id {
-        //                 inventory.remove(resource, *amount);
-        //             }
-        //         }
-        //         for (ship_id, station_id, resource, amount) in &sell_orders {
-        //             let stockpile_id = id.uuid;
-        //             if ship_id == &stockpile_id {
-        //                 inventory.remove(resource, *amount);
-        //             }
-        //             if station_id == &stockpile_id {
-        //                 inventory.add(*resource, *amount, 0);
-        //             }
-        //         }
-        //
-        //         //remove empty resources
-        //         inventory.clean();
-        //     }
-        // }
+        for transaction in transactions {
+            // todo do this with fancy market_actor trait?
+            match (self.planets.get_mut(&transaction.seller), self.ships.get_mut(&transaction.seller)) {
+                (Some(seller), None) => seller.items.remove(transaction.commodity, transaction.amount),
+                (None, Some(seller)) => seller.inventory.remove(transaction.commodity, transaction.amount),
+                _ => panic!("no seller for transaction: {:?}", transaction),
+            };
+
+            match (self.planets.get_mut(&transaction.buyer), self.ships.get_mut(&transaction.buyer)) {
+                (Some(buyer), None) => buyer.items.add(transaction.commodity, transaction.amount),
+                (None, Some(buyer)) => buyer.inventory.add(transaction.commodity, transaction.amount),
+                _ => panic!("no buyer for transaction: {:?}", transaction),
+            };
+
+        }
+
     }
 
     pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {

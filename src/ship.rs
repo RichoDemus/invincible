@@ -5,12 +5,14 @@ use ncollide2d::shape::Ball;
 use rand::prelude::StdRng;
 use rand::Rng;
 use uuid::Uuid;
+use quicksilver::log;
 
 use crate::{HEIGHT, WIDTH, market_calculations};
 use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
-use crate::market_calculations::{Commodity, BuyOrder, SellOrder};
+use crate::market_calculations::{Commodity, BuyOrder, SellOrder, MarketOrder};
 use crate::inventory::Inventory;
 use crate::planet::Planet;
+use crate::projections::id_to_name;
 
 pub struct Ship {
     pub id: Uuid,
@@ -37,38 +39,86 @@ impl Ship {
             docked_at: None,
             shape: Ball::new(2.),
             selected: false,
-            objective: ShipObjective::Idle,
+            objective: ShipObjective::Idle("new".to_string()),
             inventory: Inventory::with_capacity(100),
         }
     }
 
-    pub fn tick_day(&mut self, buy_orders: &Vec<&BuyOrder>, sell_orders: &Vec<&SellOrder>) -> ShipDecision {
+    pub fn tick_day(&mut self, market_orders: &Vec<MarketOrder>) -> ShipDecision {
+        log::info!("{}: {:?}. dock: {:?}", self.name, self.objective, self.docked_at.map(|id|id_to_name(&id).value().clone()));
         if self.inventory.space_left() < 1 {
             let destination =
-                market_calculations::calculate_where_to_sell_cargo(&self.position, self.inventory.get(&Commodity::Food), buy_orders);
+                market_calculations::calculate_where_to_sell_cargo(&self.position, self.inventory.get(&Commodity::Food), market_orders);
+            if destination.is_none() {
+                self.objective = ShipObjective::Idle("nowhere to sell".to_string());
+                log::info!("Nowhere to sell");
+                return ShipDecision::Nothing;
+            }
             let destination = destination.expect("No where to go");
-            self.objective = ShipObjective::TravelTo(destination);
+
+
+            if self.docked_at.is_none() {
+                self.objective = ShipObjective::TravelTo(destination);
+            } else {
+                if self.docked_at.unwrap() == destination {
+                    //we're docked were we want to be
+                    let local_sell_orders = market_orders.iter()
+                        .filter_map(|order| match order {
+                            MarketOrder::SellOrder(_) => None,
+                            MarketOrder::BuyOrder(order) => Some(order),
+                        })
+                        .filter(|buy_order| buy_order.location == destination)
+                        .collect::<Vec<_>>();
+                    // todo consider current sell orders before placing new
+                    let sell_order = market_calculations::create_sell_order(self.inventory.get(&Commodity::Food), Commodity::Food, self.id, local_sell_orders, destination);
+                    log::info!("placed sell order: {:?}", sell_order);
+                    return ShipDecision::Sell(sell_order);
+                }
+
+                self.objective = ShipObjective::TravelTo(destination);
+                self.docked_at = None;
+            }
+            log::info!("{} travel to planet {} to sell", self.name, id_to_name(&destination).value());
+            return ShipDecision::Nothing;
         } else {
             // cargo empty, lets buy
-            let destination = market_calculations::calculate_where_to_buy_frakking_food(&self.position, sell_orders);
+            let destination = market_calculations::calculate_where_to_buy_frakking_food(&self.position, market_orders);
+            if destination.is_none() {
+                log::info!("Couldn't find anything to buy");
+                self.objective = ShipObjective::Idle("nowhere to buy".to_string());
+                return ShipDecision::Nothing;
+            }
             let destination = destination.expect("No where to go");
 
             if self.docked_at.is_none() {
                 self.objective = ShipObjective::TravelTo(destination);
                 self.docked_at = None;
-            } else if let Some(docked_station) = self.docked_at {
+                log::info!("travel to {} to buy", id_to_name(&destination).value());
+                return ShipDecision::Nothing;
+            }
+
+            let docked_station = self.docked_at.unwrap();
+
+            if docked_station == destination {
                 //we're docked were we want to be
-                let local_sell_orders = sell_orders.iter()
+                let local_sell_orders = market_orders.iter()
+                    .filter_map(|order| match order {
+                        MarketOrder::BuyOrder(_) => None,
+                        MarketOrder::SellOrder(order) => Some(order),
+                    })
                     .filter(|sell_order|sell_order.location == docked_station)
                     .collect::<Vec<_>>();
-                let buy_order = market_calculations::create_buy_order(self.inventory.space_left(), Commodity::Food, self.id, local_sell_orders);
+                // todo consider current buy orders before placing new
+                let buy_order = market_calculations::create_buy_order(self.inventory.space_left(), Commodity::Food, self.id, local_sell_orders, docked_station);
+                log::info!("placed buy order: {:?}", buy_order);
                 return ShipDecision::Buy(buy_order);
             } else {
                 // docked at wrong station
-                self.objective = ShipObjective::TravelTo(destination)
+                self.objective = ShipObjective::TravelTo(destination);
+                log::info!("docked at wrong station");
+                return ShipDecision::Nothing;
             }
         }
-        ShipDecision::Nothing
     }
 
     pub fn tick(&mut self, position_lookup: &HashMap<Uuid, Point2<f64>>) {
@@ -79,13 +129,14 @@ impl Ship {
                             if vector.magnitude() < 5. {
                                 //close enough to dock
                                 self.docked_at = Some(destination_id);
-                                self.objective = ShipObjective::Idle;
+                                self.objective = ShipObjective::Idle("docked".to_string());
+                                log::info!("Docked at {}", id_to_name(&destination_id).value());
                             } else {
                             let vector = vector.normalize(); //maybe not needed here
 
                             let new_velocity = self.velocity + vector;
                             let new_velocity = new_velocity.normalize();
-                self.velocity = new_velocity;
+                            self.velocity = new_velocity * 2.;
 
                             //todo move to separate thing:
                             self.position += new_velocity;
@@ -95,12 +146,13 @@ impl Ship {
                 // check if there, then dock
 
             }
-            ShipObjective::Idle => {}
+            ShipObjective::Idle(_) => {}
         }
     }
 
 }
 
+#[derive(Debug)]
 pub enum ShipDecision {
     Buy(BuyOrder),
     Sell(SellOrder),
@@ -129,9 +181,9 @@ impl PositionAndShape for Ship {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ShipObjective {
-    Idle,
+    Idle(String),
     TravelTo(Uuid),
     //DockedAt(Uuid),
 }

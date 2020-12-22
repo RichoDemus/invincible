@@ -5,6 +5,8 @@ use std::fmt::Debug;
 use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
+use quicksilver::log;
+use crate::projections::id_to_name;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Commodity {
@@ -52,6 +54,17 @@ impl MarketOrder {
     }
 }
 
+impl From<BuyOrder> for MarketOrder {
+    fn from(order: BuyOrder) -> Self {
+       MarketOrder::BuyOrder(order)
+    }
+}
+
+impl From<SellOrder> for MarketOrder {
+    fn from(order: SellOrder) -> Self {
+        MarketOrder::SellOrder(order)
+    }
+}
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct BuyOrder {
@@ -91,6 +104,8 @@ impl BuyOrder {
 impl Debug for BuyOrder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Buy")
+            .field("b", id_to_name(&self.buyer).value())
+            .field("l", id_to_name(&self.location).value())
             .field("c", &self.commodity)
             .field("a", &self.amount)
             .field("p", &self.price)
@@ -153,6 +168,8 @@ impl SellOrder {
 impl Debug for SellOrder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Sell")
+            .field("s", id_to_name(&self.seller).value())
+            .field("l", id_to_name(&self.location).value())
             .field("c", &self.commodity)
             .field("a", &self.amount)
             .field("p", &self.price)
@@ -168,7 +185,8 @@ pub fn calculate_basic_selling_price(
     _current_wallet: u64,
 ) -> u64 {
     let price_float = 30. * (1. - stockpile_size as f64 / max_stockpile as f64) + 5.;
-    price_float.round() as u64
+    let result = price_float.round() as u64;
+    result
 }
 
 pub fn calculate_basic_buying_price(
@@ -288,10 +306,14 @@ pub fn calculate_basic_buying_price(
 
 pub fn calculate_where_to_buy_frakking_food(
     position: &Point2<f64>,
-    sell_orders: &Vec<&SellOrder>,
+    market_orders: &Vec<MarketOrder>,
 ) -> Option<Uuid> {
-    sell_orders
+    let where_to_buy_food = market_orders
         .into_iter()
+        .filter_map(|order| match order {
+            MarketOrder::BuyOrder(_) => None,
+            MarketOrder::SellOrder(order) => Some(order),
+        })
         .map(|order| (order.location, order.position.clone(), order.price))
         .fold1(
             |(left_id, left_position, left_sell_price),
@@ -317,16 +339,31 @@ pub fn calculate_where_to_buy_frakking_food(
                 }
             },
         )
-        .map(|(id, _position, _sell_price)| id)
+        .map(|(id, _position, _sell_price)| id);
+    // if let Some(id) = where_to_buy_food {
+    //     log::info!("Decided to buy food from: {}", id_to_name(&id).value());
+    //     log::info!("Candidates:");
+    //     for order in market_orders.iter().filter_map(|order| match order {
+    //         MarketOrder::BuyOrder(_) => None,
+    //         MarketOrder::SellOrder(order) => Some(order),
+    //     }).sorted_by_key(|order| order.price) {
+    //         log::info!("\torder: {:?}", order);
+    //     }
+    // }
+    where_to_buy_food
 }
 
 pub fn calculate_where_to_sell_cargo(
     _position: &Point2<f64>,
     food_amount: u64,
-    buy_orders: &Vec<&BuyOrder>,
+    market_orders: &Vec<MarketOrder>,
 ) -> Option<Uuid> {
-    buy_orders
+    market_orders
         .iter()
+        .filter_map(|order| match order {
+            MarketOrder::SellOrder(_) => None,
+            MarketOrder::BuyOrder(order) => Some(order),
+        })
         .map(|buy_order| {
             let buy_amount = buy_order.amount;
             let buy_amount = cmp::min(buy_amount, food_amount);
@@ -335,6 +372,7 @@ pub fn calculate_where_to_sell_cargo(
 
             (buy_order.location, total_sell)
         })
+        .filter(|(_,amount)| amount > &0)
         .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
             let left_sell_value: &u64 = left_sell_value;
             let right_sell_value: u64 = *right_sell_value;
@@ -346,7 +384,7 @@ pub fn calculate_where_to_sell_cargo(
         .map(|(id, _)| id)
 }
 
-pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_orders: Vec<&&SellOrder>) -> BuyOrder {
+pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_orders: Vec<&SellOrder>, location:Uuid) -> BuyOrder {
     let mut amount_left = amount;
     let some_order = sell_orders.first().expect("should be an order here");
     let mut lowest_price = some_order.price;
@@ -358,18 +396,45 @@ pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_ord
             break
         }
     }
+    assert_ne!(amount, 0, "Don't create zero amount buy orders");
     BuyOrder {
         id: Uuid::new_v4(),
         commodity,
         buyer,
-        location: Default::default(),
+        location,
         position,
         amount,
         price: lowest_price
     }
 }
 
-
+pub fn create_sell_order(amount: u64, commodity: Commodity, seller: Uuid, buy_orders: Vec<&BuyOrder>, location:Uuid) -> SellOrder {
+    println!("amount: {}", amount);
+    let mut amount_left = amount;
+    let some_order = buy_orders.first().expect("should be an order here");
+    let mut highest_price = some_order.price;
+    let position = some_order.position;
+    for order in buy_orders.iter().sorted_by_key(|order| order.price).rev() {
+        highest_price = order.price;
+        amount_left = amount_left.saturating_sub(order.amount);
+        if amount_left < 1 {
+            break
+        }
+    }
+    if amount == 0 {
+        panic!("sell amount 0, buy orders: {:?}", buy_orders)
+    }
+    assert_ne!(amount, 0, "Don't create zero amount sell orders");
+    SellOrder {
+        id: Uuid::new_v4(),
+        commodity,
+        seller,
+        location,
+        position,
+        amount,
+        price: highest_price
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -437,7 +502,7 @@ mod tests {
             location: uuid(21),
             position: Point2::new(1.,1.),
             amount: 100,
-            price: 10,
+            price: 11,
         };
         let to_far_away = SellOrder{
             id: uuid(2),
@@ -449,14 +514,14 @@ mod tests {
             price: 5,
         };
 
-        let sell_orders = vec![&to_expensive, &best, &to_far_away];
+        let sell_orders = vec![to_expensive.into(), best.into(), to_far_away.into()];
 
         let result = calculate_where_to_buy_frakking_food(&Point2::new(0., 0.), &sell_orders);
         assert!(result.is_some());
         if let Some(id) = result {
             assert_eq!(
                 id,
-                uuid(22) // todo should be 20
+                to_far_away.location // todo should be best
             );
         }
     }
@@ -491,7 +556,7 @@ mod tests {
             price: 40,
         };
 
-        let buy_orders = vec![&best, &to_cheap, &to_far_away];
+        let buy_orders = vec![best.into(), to_cheap.into(), to_far_away.into()];
 
         let result = calculate_where_to_sell_cargo(&Point2::new(0., 0.), 200, &buy_orders);
 
@@ -526,9 +591,9 @@ mod tests {
             ..cheapest.clone()
         };
 
-        let orders = vec![&cheapest, &mid_tier, &expensive];
+        let orders = vec![cheapest, mid_tier, expensive];
 
-        let result = create_buy_order(100, Commodity::Food, uuid(0), orders);
+        let result = create_buy_order(100, Commodity::Food, uuid(0), orders, uuid(1));
 
         assert_eq!(result.price, 20);
         assert_eq!(result.amount, 100);

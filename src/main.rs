@@ -5,11 +5,13 @@ use quicksilver::blinds::event::MouseButton::Left;
 use quicksilver::graphics::VectorFont;
 use quicksilver::input::{Event, Key, ScrollDelta};
 use quicksilver::{
-    geom::Vector, graphics::Color, run, Graphics, Input, Result, Settings, Timer, Window,
+    geom::Vector, graphics::Color, run, Graphics, Input, Result, Settings, Timer, Window,log,
 };
+use console_error_panic_hook;
 
 use crate::core::Core;
 use crate::util::convert;
+use quicksilver::log::{LevelFilter, Level};
 
 mod core;
 mod draw;
@@ -23,6 +25,7 @@ mod market_calculations;
 mod selectability;
 mod inventory;
 mod market;
+mod projections;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
 #[cfg(any(target_arch = "wasm32", debug_assertions))]
@@ -31,8 +34,8 @@ pub const FPS: f32 = 60.0;
 pub const FPS: f32 = 144.0;
 pub const UPS: f32 = 200.;
 
-pub const WIDTH: f32 = 800.0;
-pub const HEIGHT: f32 = 600.0;
+pub const WIDTH: f32 = 1800.0;
+pub const HEIGHT: f32 = 1000.0;
 
 fn main() {
     run(
@@ -42,6 +45,7 @@ fn main() {
                 x: WIDTH,
                 y: HEIGHT,
             },
+            log_level: Level::Info,
             ..Settings::default()
         },
         app,
@@ -49,6 +53,8 @@ fn main() {
 }
 
 async fn app(window: Window, mut gfx: Graphics, mut input: Input) -> Result<()> {
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+    log::info!(target: "main", "Inside app");
     let mut core = Core::new();
     core.init();
     let mut frames: u32 = 0;

@@ -8,6 +8,14 @@ pub struct Inventory {
 }
 
 impl Inventory {
+    pub fn with_food_and_capacity(food: u64, capacity: u64) -> Self {
+        let mut items = HashMap::new();
+        items.insert(Commodity::Food, food);
+        Inventory{
+            items,
+            capacity,
+        }
+    }
     pub fn with_capacity(capacity: u64) -> Self {
         Inventory{
             items: HashMap::new(),

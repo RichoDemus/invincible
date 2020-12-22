@@ -356,6 +356,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8d976903543e0c48546a91908f21588a680a8c8f984df9a5d69feccb2b2a211"
+dependencies = [
+ "cfg-if 0.1.10",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -436,6 +446,15 @@ dependencies = [
  "autocfg 1.0.1",
  "cfg-if 0.1.10",
  "lazy_static 1.4.0",
+]
+
+[[package]]
+name = "dashmap"
+version = "4.0.0-rc6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "308a6703be2d759cb5fb7b80a23547fe73a8d5ebf70d3a4ca7f0ef4c0bfc2265"
+dependencies = [
+ "once_cell",
 ]
 
 [[package]]
@@ -1105,6 +1124,8 @@ dependencies = [
 name = "invincible"
 version = "0.1.0"
 dependencies = [
+ "console_error_panic_hook",
+ "dashmap",
  "itertools 0.9.0",
  "lazy_static 1.4.0",
  "nalgebra",

@@ -9,6 +9,7 @@ use crate::{HEIGHT, WIDTH};
 use crate::core::Core;
 use crate::selectability::{SelectableAndPositionAndShape, Selectable};
 use crate::ship::ShipObjective;
+use crate::market_calculations::Commodity;
 
 lazy_static! {
     static ref NAME_OFFSET: Vector = Vector::new(-20., 60.);
@@ -96,8 +97,41 @@ fn draw_selected_planet_info(gfx: &mut Graphics, core: &Core, font: &mut FontRen
                     planet.name,
                     planet.population,
                     planet.items.items,
-                    planet.buy_orders,
-                    planet.sell_orders,
+                    planet.market_orders,
+                    "",
+                )
+                    .as_str(),
+                Color::GREEN,
+                position + *NAME_OFFSET,
+            )
+                .expect("failed to draw stockpiles");
+        } else {
+            let mut x = (planet.position.x - 20.) as f32;
+            if x + 100. > WIDTH {
+                x -= 150.
+            }
+            if x < 100. {
+                x += 150.
+            }
+            let mut y = (planet.position.y - 20.) as f32;
+            if y + 100. > HEIGHT {
+                y -= 150.
+            }
+            let position = Vector::new(x, y);
+
+            let food_amount = planet.items.items.get(&Commodity::Food).unwrap_or(&0);
+            font.draw(
+                gfx,
+                // format!("FPS: {}", last_fps).as_str(),
+                // name.name.as_str(),
+                format!(
+                    "{}. f: {}",//\nPop: {}\nStockpiles: {:?}\nFood: {:?}\nSell: {:?}",
+                    planet.name,
+                    food_amount,
+                    // planet.population,
+                    // planet.items.items,
+                    // planet.market_orders,
+                    // "",
                 )
                     .as_str(),
                 Color::GREEN,
@@ -116,8 +150,8 @@ fn draw_selected_ship_info(gfx: &mut Graphics, core: &Core, font: &mut FontRende
                 (ship.position.y - 20.) as f32,
             );
 
-            let objective = match ship.objective {
-                ShipObjective::Idle => String::from("Idle"),
+            let objective = match &ship.objective {
+                ShipObjective::Idle(str) => format!("Idle: {:?}", str),
                 ShipObjective::TravelTo(destination) => format!(
                     "Travelling to {}",
                     core.planets
