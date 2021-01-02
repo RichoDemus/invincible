@@ -10,7 +10,7 @@ use crate::projections::id_to_name;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Commodity {
-    Water, Food
+    Water, Food, Hydrogen
 }
 
 
@@ -50,6 +50,13 @@ impl MarketOrder {
             (MarketOrder::BuyOrder(left_order), MarketOrder::BuyOrder(right_order)) => left_order.price < right_order.price,
             (MarketOrder::SellOrder(left_order), MarketOrder::SellOrder(right_order)) => left_order.price > right_order.price,
             _ => panic!("Tried to do price comparison of orders of different types"),
+        }
+    }
+
+    pub fn owner(&self) -> Uuid {
+        match self {
+            MarketOrder::BuyOrder(order) => order.buyer,
+            MarketOrder::SellOrder(order) => order.seller,
         }
     }
 }
@@ -198,6 +205,22 @@ pub fn calculate_basic_buying_price(
     let price_float = 30. * (1. - stockpile_size as f64 / max_stockpile as f64);
     price_float.round() as u64
 }
+
+pub fn get_sell_and_buy_price(
+    current_amount: f64,
+    target_amount: f64,
+) -> (u64, u64) {
+    // let buy_price_float:f64 = 30. * (1. - target_amount as f64 / current_amount as f64);
+    let buy_price_float:f64 = 30. * target_amount / current_amount;
+    let buy_price_float:f64 = buy_price_float.round();
+
+    let sell_price_float:f64 = 30. * current_amount / target_amount;
+    let sell_price_float:f64 = sell_price_float.round();
+
+
+    (buy_price_float as u64, sell_price_float as u64)
+}
+
 //
 // #[derive(Clone, Debug)]
 // pub struct MarketWithPosition {
@@ -443,6 +466,28 @@ mod tests {
     use crate::util::uuid;
 
     use super::*;
+
+    #[test]
+    fn test_buy_and_sell_orders() {
+
+        // let (buy_price, sell_price) = get_sell_and_buy_price(1000., 1000.);
+    //
+
+        let inputs = vec![
+            (1000., 300.),
+            (1000., 700.),
+            (1000., 1000.),
+            (1000., 1600.),
+            (1000., 2000.),
+        ];
+
+        for (current_amount, target_amount) in inputs {
+            let (buy_price, sell_price) = get_sell_and_buy_price(current_amount, target_amount);
+
+            println!("If we have {} food and want to have {}. buy: {} sell {}", current_amount, target_amount, buy_price, sell_price);
+        }
+
+    }
 
 //
 //     #[test]

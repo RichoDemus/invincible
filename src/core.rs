@@ -82,6 +82,15 @@ impl Core {
                     water: false,
                     position: Point2::new(500., 600.),
                     population: 1,
+                    hydrogen: true,
+                    ..Planet::default()
+                },
+                Planet {
+                    name: "Fjool".to_owned(),
+                    water: false,
+                    position: Point2::new(700., 600.),
+                    population: 1,
+                    fuel_plant:true,
                     ..Planet::default()
                 },
         ];

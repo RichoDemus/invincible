@@ -32,10 +32,13 @@ fn draw_planets(gfx: &mut Graphics, core: &Core, zoom_scale: f32) {
         let circle = Circle::new(position, 10. * zoom_scale);
         gfx.fill_circle(
             &circle,
-            match planet.water {
-                true => Color::BLUE,
-                false => Color::WHITE,
-            },
+if planet.water {
+    Color::BLUE
+} else if planet.hydrogen {
+    Color::MAGENTA
+} else {
+    Color::from_rgba(46, 49, 49, 1.)
+},
         );
     }
 }
