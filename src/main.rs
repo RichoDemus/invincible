@@ -26,6 +26,7 @@ mod selectability;
 mod inventory;
 mod market;
 mod projections;
+mod v2;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
 #[cfg(any(target_arch = "wasm32", debug_assertions))]
