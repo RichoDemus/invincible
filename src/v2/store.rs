@@ -3,19 +3,30 @@ use crate::v2::commodity::Commodity;
 use std::collections::HashMap;
 
 use crate::v2::inventory::Amount;
+use uuid::Uuid;
 
 pub type Credits = u64;
 
-struct Receipt {
+pub struct Receipt {
     commodity: Commodity,
     amount: Amount,
     price: Credits,
 }
 
-#[derive(Default)]
-struct Store {
-    inventory: Inventory,
-    magically_produces_food: bool,
+pub struct Store {
+    pub id: Uuid,
+    pub inventory: Inventory,
+    pub magically_produces_food: bool,
+}
+
+impl Default for Store {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            inventory: Inventory::default(),
+            magically_produces_food: false,
+        }
+    }
 }
 
 impl Store {
@@ -27,7 +38,7 @@ impl Store {
         let _ = self.inventory.take(commodity, amount);
     }
 
-    fn buy_from_store(&mut self, commodity: Commodity, amount: Amount, price: Credits) -> Option<Receipt> {
+    pub fn buy_from_store(&mut self, commodity: Commodity, amount: Amount, price: Credits) -> Option<Receipt> {
         match self.price_check_buy_from_store(&commodity) {
             None =>
                 None,
@@ -46,7 +57,7 @@ impl Store {
         }
     }
 
-    fn sell_to_store(&mut self, commodity: Commodity, amount: Amount, price: Credits) -> Option<Receipt> {
+    pub fn sell_to_store(&mut self, commodity: Commodity, amount: Amount, price: Credits) -> Option<Receipt> {
         match self.price_check_sell_to_store(&commodity) {
             None =>
                 None,
@@ -66,21 +77,21 @@ impl Store {
 
     }
 
-    fn price_check_buy_from_store(&self, commodity: &Commodity) ->  Option<Credits> {
+    pub fn price_check_buy_from_store(&self, commodity: &Commodity) ->  Option<Credits> {
         debug_assert_eq!(commodity, &Commodity::Food);
         if self.magically_produces_food {
-            Some(2)
+            Some(1)
         } else {
             None
         }
     }
 
-    fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits>{
+    pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits>{
         debug_assert_eq!(commodity, &Commodity::Food);
         if self.magically_produces_food {
             None
         } else {
-            Some(1)
+            Some(2)
         }
     }
 
