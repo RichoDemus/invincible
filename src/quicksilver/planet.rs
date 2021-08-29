@@ -7,13 +7,13 @@ use rand::Rng;
 use uuid::Uuid;
 use quicksilver::log;
 
-use crate::{HEIGHT, WIDTH, market_calculations};
-use crate::market_calculations::{Commodity, BuyOrder, SellOrder, MarketOrder};
-use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
-use crate::core::Core;
-use crate::inventory::Inventory;
-use crate::market::market_order_resolver;
-use crate::market::market_order_resolver::Transaction;
+use crate::quicksilver::{HEIGHT, WIDTH, market_calculations};
+use crate::quicksilver::market_calculations::{Commodity, BuyOrder, SellOrder, MarketOrder};
+use crate::quicksilver::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
+use crate::quicksilver::core::Core;
+use crate::quicksilver::inventory::Inventory;
+use crate::quicksilver::market::market_order_resolver;
+use crate::quicksilver::market::market_order_resolver::Transaction;
 
 
 pub struct Planet {
@@ -309,7 +309,7 @@ fn adjust_market_orders(commodity: Commodity, market: &mut Vec<MarketOrder>, cur
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::uuid;
+    use crate::quicksilver::util::uuid;
 
     #[test]
     fn should_not_have_buy_order_if_sufficient_food() {

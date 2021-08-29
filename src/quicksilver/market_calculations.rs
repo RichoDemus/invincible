@@ -6,7 +6,7 @@ use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use uuid::Uuid;
 use quicksilver::log;
-use crate::projections::id_to_name;
+use crate::quicksilver::projections::id_to_name;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Commodity {
@@ -463,7 +463,7 @@ pub fn create_sell_order(amount: u64, commodity: Commodity, seller: Uuid, buy_or
 mod tests {
     use nalgebra::Point;
 
-    use crate::util::uuid;
+    use crate::quicksilver::util::uuid;
 
     use super::*;
 

@@ -1,4 +1,4 @@
-use crate::market_calculations::{BuyOrder, SellOrder, Commodity, MarketOrder};
+use crate::quicksilver::market_calculations::{BuyOrder, SellOrder, Commodity, MarketOrder};
 use uuid::Uuid;
 use std::{cmp, mem};
 use itertools::Itertools;
@@ -95,7 +95,7 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::uuid;
+    use crate::quicksilver::util::uuid;
 
     #[test]
     fn test_no_orders() {

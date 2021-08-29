@@ -5,11 +5,11 @@ use quicksilver::graphics::{Color, FontRenderer};
 use quicksilver::Graphics;
 use uuid::Uuid;
 
-use crate::{HEIGHT, WIDTH};
-use crate::core::Core;
-use crate::selectability::{SelectableAndPositionAndShape, Selectable};
-use crate::ship::ShipObjective;
-use crate::market_calculations::Commodity;
+use crate::quicksilver::{HEIGHT, WIDTH};
+use crate::quicksilver::core::Core;
+use crate::quicksilver::selectability::{SelectableAndPositionAndShape, Selectable};
+use crate::quicksilver::ship::ShipObjective;
+use crate::quicksilver::market_calculations::Commodity;
 
 lazy_static! {
     static ref NAME_OFFSET: Vector = Vector::new(-20., 60.);

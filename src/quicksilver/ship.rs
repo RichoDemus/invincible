@@ -7,12 +7,12 @@ use rand::Rng;
 use uuid::Uuid;
 use quicksilver::log;
 
-use crate::{HEIGHT, WIDTH, market_calculations};
-use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
-use crate::market_calculations::{Commodity, BuyOrder, SellOrder, MarketOrder};
-use crate::inventory::Inventory;
-use crate::planet::Planet;
-use crate::projections::id_to_name;
+use crate::quicksilver::{HEIGHT, WIDTH, market_calculations};
+use crate::quicksilver::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
+use crate::quicksilver::market_calculations::{Commodity, BuyOrder, SellOrder, MarketOrder};
+use crate::quicksilver::inventory::Inventory;
+use crate::quicksilver::planet::Planet;
+use crate::quicksilver::projections::id_to_name;
 
 pub struct Ship {
     pub id: Uuid,

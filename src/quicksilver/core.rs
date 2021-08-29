@@ -10,12 +10,12 @@ use rand::{Rng, SeedableRng};
 use uuid::Uuid;
 use quicksilver::log;
 
-use crate::ship::{Ship, ShipDecision};
-use crate::planet::Planet;
-use crate::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
-use crate::market_calculations::MarketOrder;
-use crate::projections;
-use crate::projections::{add_id_name_mapping, id_to_name};
+use crate::quicksilver::ship::{Ship, ShipDecision};
+use crate::quicksilver::planet::Planet;
+use crate::quicksilver::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
+use crate::quicksilver::market_calculations::MarketOrder;
+use crate::quicksilver::projections;
+use crate::quicksilver::projections::{add_id_name_mapping, id_to_name};
 
 pub struct Core {
     pub ships: HashMap<Uuid, Ship>,
