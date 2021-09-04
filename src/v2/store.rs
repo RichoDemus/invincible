@@ -150,7 +150,7 @@ mod tests {
         let buy_price = store.price_check_buy_from_store(&Commodity::Food).expect("Should be able to buy food");
         assert!(buy_price > 0);
 
-        let receipt = store.buy_from_store(Commodity::Food, 10, buy_price).expect("Store should've accepted this sale");
+        let receipt = store.buy_from_store(Commodity::Food, 10, Some(buy_price)).expect("Store should've accepted this sale");
 
         assert_eq!(receipt.commodity, Commodity::Food);
         assert_eq!(receipt.amount, 10);
@@ -169,7 +169,7 @@ mod tests {
         let sell_price = store.price_check_sell_to_store(&Commodity::Food).expect("Should be able to sell food");
         assert!(sell_price > 0);
 
-        let receipt = store.sell_to_store(Commodity::Food, 10, sell_price).expect("Store should've accepted this sale");
+        let receipt = store.sell_to_store(Commodity::Food, 10, Some(sell_price)).expect("Store should've accepted this sale");
 
         assert_eq!(receipt.commodity, Commodity::Food);
         assert_eq!(receipt.amount, 10);
