@@ -4,10 +4,10 @@ use uuid::Uuid;
 use std::cmp::Ordering;
 
 #[derive(Debug)]
-struct CommodityListing {
-    store: Uuid,
-    commodity: Commodity,
-    price: Credits,
+pub struct CommodityListing {
+    pub store: Uuid,
+    pub commodity: Commodity,
+    pub price: Credits,
 }
 
 #[derive(Default)]
@@ -16,11 +16,11 @@ pub struct Market {
 }
 
 impl Market {
-    fn add_store(&mut self, store: Store) {
+    pub fn add_store(&mut self, store: Store) {
         self.stores.push(store);
     }
 
-    fn get_sellers(&self, commodity: Commodity) -> Vec<CommodityListing> {
+    pub fn get_sellers(&self, commodity: Commodity) -> Vec<CommodityListing> {
         self.stores.iter()
             .filter_map(|store|{
                 store.price_check_buy_from_store(&commodity)
@@ -32,7 +32,7 @@ impl Market {
             }).collect()
     }
 
-    fn get_buyers(&self, commodity: Commodity) -> Vec<CommodityListing> {
+    pub fn get_buyers(&self, commodity: Commodity) -> Vec<CommodityListing> {
         self.stores.iter()
             .filter_map(|store|{
                 store.price_check_sell_to_store(&commodity)
@@ -45,6 +45,8 @@ impl Market {
     }
 
 }
+
+
 
 #[cfg(test)]
 mod tests {

@@ -8,9 +8,9 @@ use uuid::Uuid;
 pub type Credits = u64;
 
 pub struct Receipt {
-    commodity: Commodity,
-    amount: Amount,
-    price: Credits,
+    pub commodity: Commodity,
+    pub amount: Amount,
+    pub price: Credits,
 }
 
 pub struct Store {
@@ -38,17 +38,23 @@ impl Store {
         let _ = self.inventory.take(commodity, amount);
     }
 
-    pub fn buy_from_store(&mut self, commodity: Commodity, amount: Amount, price: Credits) -> Option<Receipt> {
+    pub fn buy_from_store(&mut self, commodity: Commodity, amount: Amount, price: Option<Credits>) -> Option<Receipt> {
         match self.price_check_buy_from_store(&commodity) {
             None =>
                 None,
 
             Some(store_price) => {
-                if price == store_price {
+                if price.is_none() {
                     Some(Receipt {
                         commodity,
                         amount,
-                        price,
+                        price: store_price,
+                    })
+                } else if price.unwrap() == store_price {
+                    Some(Receipt {
+                        commodity,
+                        amount,
+                        price: store_price,
                     })
                 } else {
                     None
@@ -57,17 +63,23 @@ impl Store {
         }
     }
 
-    pub fn sell_to_store(&mut self, commodity: Commodity, amount: Amount, price: Credits) -> Option<Receipt> {
+    pub fn sell_to_store(&mut self, commodity: Commodity, amount: Amount, price: Option<Credits>) -> Option<Receipt> {
         match self.price_check_sell_to_store(&commodity) {
             None =>
                 None,
 
             Some(store_price) => {
-                if price == store_price {
+                if price.is_none() {
                     Some(Receipt {
                         commodity,
                         amount,
-                        price,
+                        price: store_price,
+                    })
+                } else if price.unwrap() == store_price {
+                    Some(Receipt {
+                        commodity,
+                        amount,
+                        price: store_price,
                     })
                 } else {
                     None
