@@ -13,3 +13,10 @@ cargo web start --features quicksilver/stdweb
 
 ## build and deploy
 built automatically by github actions
+
+## Thoughts
+For a given commodity lets say Food or Fuel
+It's produced somewhere, it costs X to produce, which is a static cost and a cost per unit)
+So we have a lower price point, selling it for lower is a loss
+
+It's consumed somewhere, there is a max price the buyer is willing and able to pay

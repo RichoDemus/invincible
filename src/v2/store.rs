@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 pub type Credits = u64;
 
+#[derive(Debug)]
 pub struct Receipt {
     pub commodity: Commodity,
     pub amount: Amount,
@@ -39,6 +40,10 @@ impl Store {
     }
 
     pub fn buy_from_store(&mut self, commodity: Commodity, amount: Amount, price: Option<Credits>) -> Option<Receipt> {
+        if self.inventory.get(&commodity) < amount {
+            // Not enough of that commodity
+            return None
+        }
         match self.price_check_buy_from_store(&commodity) {
             None =>
                 None,
@@ -92,18 +97,18 @@ impl Store {
     pub fn price_check_buy_from_store(&self, commodity: &Commodity) ->  Option<Credits> {
         debug_assert_eq!(commodity, &Commodity::Food);
         if self.magically_produces_food {
-            Some(1)
+            Some(2)
         } else {
-            None
+            Some(5)
         }
     }
 
     pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits>{
         debug_assert_eq!(commodity, &Commodity::Food);
         if self.magically_produces_food {
-            None
+            Some(1)
         } else {
-            Some(2)
+            Some(3)
         }
     }
 
@@ -142,8 +147,6 @@ mod tests {
           magically_produces_food: true,
             ..Store::default()
         };
-
-        assert!(store.price_check_sell_to_store(&Commodity::Food).is_none());
 
         store.give(Commodity::Food, 100);
 

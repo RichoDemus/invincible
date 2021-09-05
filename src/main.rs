@@ -15,6 +15,7 @@ mod ship;
 mod camera;
 mod planet;
 pub mod common_components;
+pub mod util;
 
 fn main() {
     App::build()
