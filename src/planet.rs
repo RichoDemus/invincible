@@ -14,10 +14,13 @@ impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(planet_setup.system());
         app.add_system(population_buys_food.system());
+        app.add_system(water_planet_produces_food.system());
     }
 }
 
 pub struct Planet;
+
+pub struct Water;
 
 fn planet_setup(mut commands: Commands) {
     let planets = vec![
@@ -32,7 +35,7 @@ fn planet_setup(mut commands: Commands) {
             center: Vec2::default(),
         };
 
-        commands.spawn_bundle(GeometryBuilder::build_as(
+        let mut planet = commands.spawn_bundle(GeometryBuilder::build_as(
             &shape,
             ShapeColors::outlined(color, Color::WHITE),
             DrawMode::Outlined {
@@ -40,7 +43,11 @@ fn planet_setup(mut commands: Commands) {
                 outline_options: StrokeOptions::default().with_line_width(1.0),
             },
             Transform::default(),
-        ))
+        ));
+        if magical_food {
+            planet.insert(Water);
+        }
+        planet
             .insert(Transform::from_translation(position.extend(0.)))
             .insert(Name(name.to_string()))
             .with_children(|parent| {
@@ -73,5 +80,58 @@ fn population_buys_food(
                 }
             }
         }
+    }
+}
+
+fn water_planet_produces_food(
+    time: Res<Time>,
+    mut once_per_second: Local<OncePerSecond>,
+    water_planets: Query<(Entity, &Children), With<Water>>,
+) {
+    if once_per_second.timer.tick(time.delta()).just_finished() {
+        panic!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_produce_food() {
+        let mut world = World::default();
+        let mut update_stage = SystemStage::parallel();
+        update_stage.add_system(water_planet_produces_food.system());
+
+        let time = Time::default();
+        // mock time? :S 
+        world.insert_resource(time);
+
+        let dry_planet_store_entity = world.spawn().insert(Store::default()).id();
+        let water_planet_store_entity = world.spawn().insert(Store::default()).id();
+
+        let _water_world = world.spawn()
+            .push_children(&[dry_planet_store_entity])
+            .id();
+
+        let _non_water_world = world.spawn()
+            .insert(Water)
+            .push_children(&[water_planet_store_entity])
+            .id();
+
+
+        let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
+        let water_store = world.get::<Store>(water_planet_store_entity).unwrap();
+
+        assert_eq!(dry_store.inventory.get(&Commodity::Food), 0);
+        assert_eq!(water_store.inventory.get(&Commodity::Food), 0);
+
+        update_stage.run(&mut world);
+
+        let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
+        let water_store = world.get::<Store>(water_planet_store_entity).unwrap();
+
+        assert_eq!(dry_store.inventory.get(&Commodity::Food), 0);
+        assert_eq!(water_store.inventory.get(&Commodity::Food), 0);
     }
 }
