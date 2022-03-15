@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use crate::v2::inventory::Inventory;
 use crate::v2::commodity::Commodity;
 use std::collections::HashMap;
@@ -22,11 +23,13 @@ pub struct Store {
 
 impl Default for Store {
     fn default() -> Self {
-        Self {
+        let mut store = Self {
             id: Uuid::new_v4(),
             inventory: Inventory::default(),
             magically_produces_food: false,
-        }
+        };
+        store.give(Commodity::Food, 100);
+        store
     }
 }
 

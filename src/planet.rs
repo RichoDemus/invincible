@@ -89,7 +89,7 @@ fn water_planet_produces_food(
     water_planets: Query<(Entity, &Children), With<Water>>,
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
-        panic!()
+        // todo!("impl produce food")
     }
 }
 
