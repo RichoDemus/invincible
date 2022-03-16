@@ -3,6 +3,7 @@ use bevy_prototype_lyon::prelude::*;
 use crate::v2::commodity::Commodity;
 use crate::v2::market::Market;
 use std::ops::Not;
+use crate::asset_loading::Fonts;
 use crate::common_components::Name;
 use crate::planet::Planet;
 use crate::v2::store::Store;
@@ -32,7 +33,7 @@ enum ShipAction {
     Sell {planet_to_sell_at: Entity, store: Entity, commodity: Commodity},
 }
 
-fn ship_setup(mut commands: Commands) {
+fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
     commands
         .spawn_bundle(GeometryBuilder::build_as(
             &shapes::Circle { // todo, triangle instead of circle
@@ -46,7 +47,25 @@ fn ship_setup(mut commands: Commands) {
             Transform::default(),
         ))
         .insert(Ship)
-        .insert(ActionQueue::default());
+        .insert(ActionQueue::default())
+        .with_children(|parent| {
+            parent.spawn().insert_bundle(Text2dBundle {
+                text: Text::with_section(
+                    "Ship",
+                    TextStyle {
+                        font: fonts.font.clone(),
+                        font_size: 10.0,
+                        color: Color::PINK,
+                    },
+                    TextAlignment {
+                        vertical: VerticalAlign::Center,
+                        horizontal: HorizontalAlign::Center,
+                    }
+                ),
+                transform: Transform::from_xyz(0., -15., 0.),
+                ..Default::default()
+            });
+        });
 }
 
 fn ship_decision_system(

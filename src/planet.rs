@@ -24,7 +24,7 @@ pub struct Planet;
 #[derive(Component)]
 pub struct Water;
 
-fn planet_setup(mut commands: Commands) {
+fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
     let planets = vec![
         ("Terra", false, Vec2::new(100.,100.), Color::CYAN, 20.),
         ("Agri", true, Vec2::new(-100.,-100.), Color::LIME_GREEN, 10.),
@@ -55,6 +55,22 @@ fn planet_setup(mut commands: Commands) {
                 parent.spawn().insert(Store {
                     magically_produces_food: magical_food,
                     ..Store::default()
+                });
+                parent.spawn().insert_bundle(Text2dBundle {
+                    text: Text::with_section(
+                        name,
+                        TextStyle {
+                            font: fonts.font.clone(),
+                            font_size: 10.0,
+                            color: Color::PINK,
+                        },
+                        TextAlignment {
+                            vertical: VerticalAlign::Center,
+                            horizontal: HorizontalAlign::Center,
+                        }
+                    ),
+                    transform: Transform::from_xyz(0., -25., 0.),
+                    ..Default::default()
                 });
             });
     }
@@ -88,9 +104,16 @@ fn water_planet_produces_food(
     time: Res<Time>,
     mut once_per_second: Local<OncePerSecond>,
     water_planets: Query<(Entity, &Children), With<Water>>,
+    mut stores: Query<(&mut Store)>,
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
-        // todo!("impl produce food")
+        for (_entity, children) in water_planets.iter()  {
+            for child in children.iter() {
+                if let Ok(mut store) = stores.get_mut(*child) {
+                    store.give(Commodity::Food, 10);
+                }
+            }
+        }
     }
 }
 

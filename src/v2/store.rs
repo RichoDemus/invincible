@@ -35,11 +35,11 @@ impl Default for Store {
 }
 
 impl Store {
-    fn give(&mut self, commodity: Commodity, amount: Amount) {
+    pub fn give(&mut self, commodity: Commodity, amount: Amount) {
         self.inventory.add(commodity, amount);
     }
 
-    fn take(&mut self, commodity: &Commodity, amount: Amount) {
+    pub fn take(&mut self, commodity: &Commodity, amount: Amount) {
         let _ = self.inventory.take(commodity, amount);
     }
 
