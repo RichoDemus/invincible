@@ -50,8 +50,8 @@ impl Default for Planet {
 
 impl Planet {
     pub fn random(id: Uuid, names: &mut Vec<&str>, rng: &mut StdRng) -> Self {
-        let x = rng.gen_range(0., WIDTH as f64);
-        let y = rng.gen_range(0., HEIGHT as f64);
+        let x = rng.gen_range(0.0..WIDTH as f64);
+        let y = rng.gen_range(0.0..HEIGHT as f64);
         let name = names.pop().expect("no more planet names");
         let mut inventory = Inventory::with_capacity(1000);
         inventory.add(Commodity::Food, 700);
@@ -60,10 +60,10 @@ impl Planet {
             name: String::from(name),
             position: Point2::new(x, y),
             shape: Ball::new(10.),
-            population: rng.gen_range(1, 10),
-            water: rng.gen_range(0, 4) == 0,
-            hydrogen: rng.gen_range(0, 4) == 0,
-            fuel_plant: rng.gen_range(0, 4) == 0,
+            population: rng.gen_range(1..10),
+            water: rng.gen_range(0..4) == 0,
+            hydrogen: rng.gen_range(0..4) == 0,
+            fuel_plant: rng.gen_range(0..4) == 0,
             selected: false,
             items: inventory,
             market_orders: Default::default(),

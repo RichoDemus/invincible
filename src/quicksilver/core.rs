@@ -284,13 +284,14 @@ impl Core {
                 //hacky, deselect everything now
                 planet.deselect();
                     let (position, shape) = planet.position_and_shape();
-                    let distance = shape.distance_to_point(
-                        &Isometry2::translation(position.x, position.y),
-                        &Point {
-                            coords: click_position,
-                        },
-                        true,
-                    );
+                    // let distance = shape.distance_to_point(
+                    //     &ncollide2d::Isometry2::translation(position.x, position.y),
+                    //     &Point {
+                    //         coords: click_position,
+                    //     },
+                    //     true,
+                    // )
+                let distance= 0.;
                     (planet, distance)
             })
             .filter(|(_, distance) | distance < &MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER)

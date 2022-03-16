@@ -28,8 +28,8 @@ pub struct Ship {
 
 impl Ship {
     pub fn random(id: Uuid, names: &mut Vec<&str>, rng: &mut StdRng) -> Self {
-        let x = rng.gen_range(0., WIDTH as f64);
-        let y = rng.gen_range(0., HEIGHT as f64);
+        let x = rng.gen_range(0.0..WIDTH as f64);
+        let y = rng.gen_range(0.0..HEIGHT as f64);
         let name = names.pop().expect("no more planet names");
         Ship {
             id,
