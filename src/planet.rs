@@ -12,9 +12,9 @@ pub struct PlanetPlugin;
 
 impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(planet_setup.system());
-        app.add_system(population_buys_food.system());
-        app.add_system(water_planet_produces_food.system());
+        app.add_startup_system(planet_setup);
+        app.add_system(population_buys_food);
+        app.add_system(water_planet_produces_food);
     }
 }
 
@@ -131,7 +131,7 @@ mod tests {
     fn test_produce_food() {
         let mut world = World::default();
         let mut update_stage = SystemStage::parallel();
-        update_stage.add_system(water_planet_produces_food.system());
+        update_stage.add_system(water_planet_produces_food);
 
         let time = Time::default();
         // mock time? :S

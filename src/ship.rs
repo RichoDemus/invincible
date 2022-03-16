@@ -14,10 +14,10 @@ pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(ship_setup.system());
-        app.add_system(ship_decision_system.system());
-        app.add_system(move_ship_towards_objective.system());
-        app.add_system(trade_with_planet.system());
+        app.add_startup_system(ship_setup);
+        app.add_system(ship_decision_system);
+        app.add_system(move_ship_towards_objective);
+        app.add_system(trade_with_planet);
     }
 }
 

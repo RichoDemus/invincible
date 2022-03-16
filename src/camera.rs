@@ -5,9 +5,9 @@ pub(crate) struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup.system());
-        app.add_system(camera_system.system());
-        app.add_system(camera_zoom_system.system());
+        app.add_startup_system(setup);
+        app.add_system(camera_system);
+        app.add_system(camera_zoom_system);
     }
 }
 
