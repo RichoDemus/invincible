@@ -3,6 +3,7 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
+use crate::unit_selection::Selectable;
 use crate::util::OncePerSecond;
 use crate::v2::commodity::Commodity;
 use crate::v2::market::Market;
@@ -57,6 +58,7 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
         planet
             .insert(Transform::from_translation(position.extend(0.)))
             .insert(Name(name.to_string()))
+            .insert(Selectable::default())
             .with_children(|parent| {
                 parent.spawn().insert(Store {
                     magically_produces_food: magical_food,
@@ -67,8 +69,8 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
                         name,
                         TextStyle {
                             font: fonts.font.clone(),
-                            font_size: 10.0,
-                            color: Color::PINK,
+                            font_size: 20.0,
+                            color: Color::WHITE,
                         },
                         TextAlignment {
                             vertical: VerticalAlign::Center,

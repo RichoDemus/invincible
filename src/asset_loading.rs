@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::render_resource::Texture;
 
 pub(crate) struct AssetLoadingPlugin;
 
@@ -23,14 +24,16 @@ impl FromWorld for Fonts {
 }
 
 pub(crate) struct Sprites {
+    pub(crate) selection_box: Handle<Image>,
     // pub(crate) pawn: Handle<TextureAtlas>,
-// pub(crate) trees: Handle<TextureAtlas>,
-// pub(crate) grass: Handle<TextureAtlas>,
-// pub(crate) map: Handle<Texture>,
+    // pub(crate) trees: Handle<TextureAtlas>,
+    // pub(crate) grass: Handle<TextureAtlas>,
+    // pub(crate) map: Handle<Texture>,
 }
 
 impl FromWorld for Sprites {
     fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
         // let (lumberjack, map, grass, trees) = {
         //     let asset_server = world.get_resource::<AssetServer>().unwrap();
         //     (
@@ -54,7 +57,7 @@ impl FromWorld for Sprites {
             // pawn: lumberjack_atlas,
             // trees: tree_atlas,
             // grass: grass_atlas,
-            // map,
+            selection_box: asset_server.load("selection_box.png"),
         }
     }
 }

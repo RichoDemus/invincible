@@ -6,6 +6,7 @@ use bevy_prototype_lyon::prelude::*;
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
 use crate::planet::Planet;
+use crate::unit_selection::Selectable;
 use crate::v2::commodity::Commodity;
 use crate::v2::market::Market;
 use crate::v2::store::Store;
@@ -59,14 +60,15 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
         ))
         .insert(Ship)
         .insert(ActionQueue::default())
+        .insert(Selectable::default())
         .with_children(|parent| {
             parent.spawn().insert_bundle(Text2dBundle {
                 text: Text::with_section(
                     "Ship",
                     TextStyle {
                         font: fonts.font.clone(),
-                        font_size: 10.0,
-                        color: Color::PINK,
+                        font_size: 20.0,
+                        color: Color::WHITE,
                     },
                     TextAlignment {
                         vertical: VerticalAlign::Center,
