@@ -11,15 +11,17 @@ use crate::v2::commodity::Commodity;
 pub struct PlanetPlugin;
 
 impl Plugin for PlanetPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_startup_system(planet_setup.system());
         app.add_system(population_buys_food.system());
         app.add_system(water_planet_produces_food.system());
     }
 }
 
+#[derive(Component)]
 pub struct Planet;
 
+#[derive(Component)]
 pub struct Water;
 
 fn planet_setup(mut commands: Commands) {
@@ -37,10 +39,9 @@ fn planet_setup(mut commands: Commands) {
 
         let mut planet = commands.spawn_bundle(GeometryBuilder::build_as(
             &shape,
-            ShapeColors::outlined(color, Color::WHITE),
             DrawMode::Outlined {
-                fill_options: FillOptions::default(),
-                outline_options: StrokeOptions::default().with_line_width(1.0),
+                fill_mode: FillMode::color(color),
+                outline_mode: StrokeMode::new(Color::WHITE, 1.0),
             },
             Transform::default(),
         ));

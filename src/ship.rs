@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_prototype_lyon::prelude::*;
 use crate::v2::commodity::Commodity;
 use crate::v2::market::Market;
 use std::ops::Not;
@@ -9,7 +10,7 @@ use crate::v2::store::Store;
 pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_startup_system(ship_setup.system());
         app.add_system(ship_decision_system.system());
         app.add_system(move_ship_towards_objective.system());
@@ -17,9 +18,10 @@ impl Plugin for ShipPlugin {
     }
 }
 
+#[derive(Component)]
 struct Ship;
 
-#[derive(Default)]
+#[derive(Default, Component)]
 struct ActionQueue {
     queue: Vec<ShipAction>,
 }
@@ -30,14 +32,19 @@ enum ShipAction {
     Sell {planet_to_sell_at: Entity, store: Entity, commodity: Commodity},
 }
 
-fn ship_setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn ship_setup(mut commands: Commands) {
     commands
-        .spawn_bundle(SpriteBundle {
-            material: materials.add(Color::rgb_u8(33, 117, 18).into()),
-            transform: Transform::from_translation(Vec3::new(-210.0, 300., 0.0)),
-            sprite: Sprite::new(Vec2::new(5.0, 5.0)),
-            ..Default::default()
-        })
+        .spawn_bundle(GeometryBuilder::build_as(
+            &shapes::Circle { // todo, triangle instead of circle
+                radius: 5.,
+                center: Vec2::default(),
+            },
+            DrawMode::Outlined {
+                fill_mode: FillMode::color(Color::GOLD),
+                outline_mode: StrokeMode::new(Color::WHITE, 1.0),
+            },
+            Transform::default(),
+        ))
         .insert(Ship)
         .insert(ActionQueue::default());
 }

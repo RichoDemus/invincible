@@ -15,6 +15,7 @@ pub struct Receipt {
     pub price: Credits,
 }
 
+#[derive(Component)]
 pub struct Store {
     pub id: Uuid,
     pub inventory: Inventory,

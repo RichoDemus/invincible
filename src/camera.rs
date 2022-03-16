@@ -4,13 +4,14 @@ use bevy::prelude::*;
 pub(crate) struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_startup_system(setup.system());
         app.add_system(camera_system.system());
         app.add_system(camera_zoom_system.system());
     }
 }
 
+#[derive(Component)]
 pub(crate) struct MainCamera;
 
 fn setup(mut commands: Commands) {
@@ -64,7 +65,7 @@ pub(crate) fn get_camera_position_in_world_coordinates(
 ) -> Option<Vec2> {
     if let Some(window) = windows.get_primary() {
         if let Some(cursor_position) = window.cursor_position() {
-            if let Ok(global_transform) = camera_query.single() {
+            let global_transform = camera_query.single();
                 let norm = Vec3::new(
                     cursor_position.x - window.width() / 2.,
                     cursor_position.y - window.height() / 2.,
@@ -73,7 +74,6 @@ pub(crate) fn get_camera_position_in_world_coordinates(
 
                 let pos = *global_transform * norm;
                 return Some(pos.truncate());
-            }
         }
     }
     None

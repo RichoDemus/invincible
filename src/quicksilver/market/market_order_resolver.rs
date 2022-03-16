@@ -55,7 +55,7 @@ pub fn resolve_orders(mut old_orders: Vec<MarketOrder>, mut new_order: MarketOrd
 
         let amount_to_transfer = cmp::min(best_order.amount(), new_order.amount());
         if amount_to_transfer == 0 {
-            panic!(format!("Attempted to do a zero amount transfer: {:?} {:?}", best_order, new_order));
+            panic!("{}", format!("Attempted to do a zero amount transfer: {:?} {:?}", best_order, new_order));
         }
 
         let (seller, seller_price, buyer, buyer_price) = match (&best_order, &new_order) {

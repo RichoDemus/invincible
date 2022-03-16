@@ -18,7 +18,7 @@ pub mod common_components;
 pub mod util;
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(WindowDescriptor {
             title: "Invincible".to_string(),
             width: 800.,

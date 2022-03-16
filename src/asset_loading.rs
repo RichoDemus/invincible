@@ -3,7 +3,7 @@ use bevy::prelude::*;
 pub(crate) struct AssetLoadingPlugin;
 
 impl Plugin for AssetLoadingPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.init_resource::<Fonts>();
         app.init_resource::<Sprites>();
     }
