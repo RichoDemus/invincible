@@ -58,14 +58,7 @@ impl Store {
             None => None,
 
             Some(store_price) => {
-                if price.is_none() {
-                    self.take(&commodity, amount);
-                    Some(Receipt {
-                        commodity,
-                        amount,
-                        price: store_price,
-                    })
-                } else if price.unwrap() == store_price {
+                if price.is_none() || price.unwrap() == store_price {
                     self.take(&commodity, amount);
                     Some(Receipt {
                         commodity,
@@ -89,14 +82,7 @@ impl Store {
             None => None,
 
             Some(store_price) => {
-                if price.is_none() {
-                    self.give(commodity, amount);
-                    Some(Receipt {
-                        commodity,
-                        amount,
-                        price: store_price,
-                    })
-                } else if price.unwrap() == store_price {
+                if price.is_none() || price.unwrap() == store_price {
                     self.give(commodity, amount);
                     Some(Receipt {
                         commodity,
