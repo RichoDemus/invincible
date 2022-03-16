@@ -39,7 +39,7 @@ impl Store {
     pub fn give(&mut self, commodity: Commodity, amount: Amount) {
         self.inventory.add(commodity, amount);
     }
-
+    // todo, since commodity is copy, should we just take it by value?
     pub fn take(&mut self, commodity: &Commodity, amount: Amount) {
         let _ = self.inventory.take(commodity, amount);
     }
@@ -59,12 +59,14 @@ impl Store {
 
             Some(store_price) => {
                 if price.is_none() {
+                    self.take(&commodity, amount);
                     Some(Receipt {
                         commodity,
                         amount,
                         price: store_price,
                     })
                 } else if price.unwrap() == store_price {
+                    self.take(&commodity, amount);
                     Some(Receipt {
                         commodity,
                         amount,
@@ -88,12 +90,14 @@ impl Store {
 
             Some(store_price) => {
                 if price.is_none() {
+                    self.give(commodity, amount);
                     Some(Receipt {
                         commodity,
                         amount,
                         price: store_price,
                     })
                 } else if price.unwrap() == store_price {
+                    self.give(commodity, amount);
                     Some(Receipt {
                         commodity,
                         amount,

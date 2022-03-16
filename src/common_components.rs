@@ -1,5 +1,6 @@
-use bevy::prelude::*;
 use std::fmt::Formatter;
+
+use bevy::prelude::*;
 
 #[derive(Default, Debug, Component)]
 pub struct Name(pub String);

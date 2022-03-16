@@ -1,8 +1,11 @@
-use crate::common_components::Name;
+use bevy::ecs::query::QueryEntityError;
 use bevy::prelude::*;
 
 use crate::asset_loading::Sprites;
 use crate::camera::{get_camera_position_in_world_coordinates, MainCamera};
+use crate::common_components::Name;
+use crate::v2::commodity::Commodity;
+use crate::v2::store::Store;
 
 #[derive(Component)]
 struct SelectedEntityInfoPanel;
@@ -123,15 +126,26 @@ pub(crate) fn add_selected_unit_info_panel(parent: &mut ChildBuilder, font: Hand
 
 fn update_info_panel_system(
     mut info_box_query: Query<&mut Text, With<SelectedEntityInfoPanel>>,
-    selected_entity_query: Query<(&Selectable, &Name)>,
+    selected_entity_query: Query<(&Selectable, &Name, &Children)>,
+    mut store_lookup: Query<(&mut Store)>,
 ) {
-    if let Some((_selectable, name)) = selected_entity_query
+    if let Some((_selectable, name, children)) = selected_entity_query
         .iter()
-        .find(|(selectable, name)| selectable.selected)
+        .find(|(selectable, name, _)| selectable.selected)
     {
         if let Some(mut text) = info_box_query.iter_mut().next() {
             let text = text.sections.get_mut(0).unwrap();
             text.value = format!("Selected {}", name);
+
+            let children: &Children = children;
+            for child in children.iter() {
+                if let Ok(store) = store_lookup.get_mut(*child) {
+                    text.value.push_str(&format!(
+                        "\nFood: {}",
+                        store.inventory.get(&Commodity::Food)
+                    ));
+                }
+            }
         }
     } else {
         if let Some(mut text) = info_box_query.iter_mut().next() {
