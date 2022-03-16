@@ -1,15 +1,19 @@
+use crate::common_components::Name;
 use bevy::prelude::*;
 
 use crate::asset_loading::Sprites;
 use crate::camera::{get_camera_position_in_world_coordinates, MainCamera};
+
+#[derive(Component)]
+struct SelectedEntityInfoPanel;
 
 pub(crate) struct SelectPlugin;
 
 impl Plugin for SelectPlugin {
     fn build(&self, app: &mut App) {
         // app.add_startup_system(load_sprite_system.system());
-        app.add_system(click_to_select_system.system());
-        // app.add_system(update_info_panel_system.system());
+        app.add_system(click_to_select_system);
+        app.add_system(update_info_panel_system);
     }
 }
 
@@ -71,6 +75,68 @@ fn click_to_select_system(
                     }
                 }
             }
+        }
+    }
+}
+
+pub(crate) fn add_selected_unit_info_panel(parent: &mut ChildBuilder, font: Handle<Font>) {
+    parent
+        .spawn_bundle(NodeBundle {
+            style: Style {
+                size: Size::new(Val::Percent(100.), Val::Px(400.0)),
+                border: Rect::all(Val::Px(2.0)),
+                flex_wrap: FlexWrap::Wrap,
+                flex_direction: FlexDirection::Row,
+                ..Default::default()
+            },
+            color: Color::WHITE.into(),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(TextBundle {
+                    style: Style {
+                        align_self: AlignSelf::FlexEnd,
+                        position_type: PositionType::Absolute,
+                        position: Rect {
+                            top: Val::Px(5.0),
+                            left: Val::Px(15.0),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    text: Text::with_section(
+                        "",
+                        TextStyle {
+                            font,
+                            font_size: 16.,
+                            color: Color::BLACK,
+                            ..Default::default()
+                        },
+                        Default::default(),
+                    ),
+                    ..Default::default()
+                })
+                .insert(SelectedEntityInfoPanel);
+        });
+}
+
+fn update_info_panel_system(
+    mut info_box_query: Query<&mut Text, With<SelectedEntityInfoPanel>>,
+    selected_entity_query: Query<(&Selectable, &Name)>,
+) {
+    if let Some((_selectable, name)) = selected_entity_query
+        .iter()
+        .find(|(selectable, name)| selectable.selected)
+    {
+        if let Some(mut text) = info_box_query.iter_mut().next() {
+            let text = text.sections.get_mut(0).unwrap();
+            text.value = format!("Selected {}", name);
+        }
+    } else {
+        if let Some(mut text) = info_box_query.iter_mut().next() {
+            let text = text.sections.get_mut(0).unwrap();
+            text.value = "Nothing selected".to_string();
         }
     }
 }

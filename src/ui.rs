@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::asset_loading::Fonts;
+use crate::unit_selection;
 
 pub struct UiPlugin;
 
@@ -44,22 +45,10 @@ fn setup(mut commands: Commands, fonts: Res<Fonts>) {
                             ..Default::default()
                         })
                         .with_children(|parent| {
-                            parent.spawn_bundle(TextBundle {
-                                style: Style {
-                                    margin: Rect::all(Val::Px(5.0)),
-                                    ..Default::default()
-                                },
-                                text: Text::with_section(
-                                    "Text Example",
-                                    TextStyle {
-                                        font: fonts.font.clone(),
-                                        font_size: 20.0,
-                                        color: Color::WHITE,
-                                    },
-                                    Default::default(),
-                                ),
-                                ..Default::default()
-                            });
+                            unit_selection::add_selected_unit_info_panel(
+                                parent,
+                                fonts.font.clone(),
+                            );
                         });
                 });
         });

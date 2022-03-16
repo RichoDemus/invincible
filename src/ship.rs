@@ -61,6 +61,7 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
         .insert(Ship)
         .insert(ActionQueue::default())
         .insert(Selectable::default())
+        .insert(Name("Wayfarer".to_string()))
         .with_children(|parent| {
             parent.spawn().insert_bundle(Text2dBundle {
                 text: Text::with_section(
