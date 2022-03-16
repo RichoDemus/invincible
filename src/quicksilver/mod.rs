@@ -1,14 +1,14 @@
+use console_error_panic_hook;
 use quicksilver::blinds::event::MouseButton::Left;
 use quicksilver::graphics::VectorFont;
 use quicksilver::input::{Event, Key, ScrollDelta};
+use quicksilver::log::{Level, LevelFilter};
 use quicksilver::{
-    geom::Vector, graphics::Color, run, Graphics, Input, Result, Settings, Timer, Window,log,
+    geom::Vector, graphics::Color, log, run, Graphics, Input, Result, Settings, Timer, Window,
 };
-use console_error_panic_hook;
 
 use crate::quicksilver::core::Core;
 use crate::quicksilver::util::convert;
-use quicksilver::log::{LevelFilter, Level};
 
 mod core;
 mod draw;
@@ -16,13 +16,13 @@ mod draw;
 // mod market_calculations;
 mod ship;
 // mod ship_components;
-mod util;
-mod planet;
-mod market_calculations;
-mod selectability;
 mod inventory;
 mod market;
+mod market_calculations;
+mod planet;
 mod projections;
+mod selectability;
+mod util;
 
 // use 144 fps for non wasm release, use 60 fps for wasm or debug
 #[cfg(any(target_arch = "wasm32", debug_assertions))]

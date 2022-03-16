@@ -1,5 +1,5 @@
-use ncollide2d::shape::Ball;
 use nalgebra::Point2;
+use ncollide2d::shape::Ball;
 
 pub trait SelectableAndPositionAndShape: Selectable + PositionAndShape {}
 

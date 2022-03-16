@@ -5,11 +5,11 @@ use quicksilver::graphics::{Color, FontRenderer};
 use quicksilver::Graphics;
 use uuid::Uuid;
 
-use crate::quicksilver::{HEIGHT, WIDTH};
 use crate::quicksilver::core::Core;
-use crate::quicksilver::selectability::{SelectableAndPositionAndShape, Selectable};
-use crate::quicksilver::ship::ShipObjective;
 use crate::quicksilver::market_calculations::Commodity;
+use crate::quicksilver::selectability::{Selectable, SelectableAndPositionAndShape};
+use crate::quicksilver::ship::ShipObjective;
+use crate::quicksilver::{HEIGHT, WIDTH};
 
 lazy_static! {
     static ref NAME_OFFSET: Vector = Vector::new(-20., 60.);
@@ -32,13 +32,13 @@ fn draw_planets(gfx: &mut Graphics, core: &Core, zoom_scale: f32) {
         let circle = Circle::new(position, 10. * zoom_scale);
         gfx.fill_circle(
             &circle,
-if planet.water {
-    Color::BLUE
-} else if planet.hydrogen {
-    Color::MAGENTA
-} else {
-    Color::from_rgba(46, 49, 49, 1.)
-},
+            if planet.water {
+                Color::BLUE
+            } else if planet.hydrogen {
+                Color::MAGENTA
+            } else {
+                Color::from_rgba(46, 49, 49, 1.)
+            },
         );
     }
 }
@@ -55,11 +55,11 @@ fn draw_ships(gfx: &mut Graphics, core: &Core, zoom_scale: f32) {
 }
 
 fn draw_selected_markers(gfx: &mut Graphics, core: &Core, _zoom_scale: f32) {
-    let ships = core.ships.values().map(|e|{
+    let ships = core.ships.values().map(|e| {
         let selectable: &dyn SelectableAndPositionAndShape = e;
         selectable
     });
-    let planets = core.planets.values().map(|e|{
+    let planets = core.planets.values().map(|e| {
         let selectable: &dyn SelectableAndPositionAndShape = e;
         selectable
     });
@@ -97,17 +97,13 @@ fn draw_selected_planet_info(gfx: &mut Graphics, core: &Core, font: &mut FontRen
                 // name.name.as_str(),
                 format!(
                     "{}\nPop: {}\nStockpiles: {:?}\nFood: {:?}\nSell: {:?}",
-                    planet.name,
-                    planet.population,
-                    planet.items.items,
-                    planet.market_orders,
-                    "",
+                    planet.name, planet.population, planet.items.items, planet.market_orders, "",
                 )
-                    .as_str(),
+                .as_str(),
                 Color::GREEN,
                 position + *NAME_OFFSET,
             )
-                .expect("failed to draw stockpiles");
+            .expect("failed to draw stockpiles");
         } else {
             let mut x = (planet.position.x - 20.) as f32;
             if x + 100. > WIDTH {
@@ -128,7 +124,7 @@ fn draw_selected_planet_info(gfx: &mut Graphics, core: &Core, font: &mut FontRen
                 // format!("FPS: {}", last_fps).as_str(),
                 // name.name.as_str(),
                 format!(
-                    "{}. f: {}",//\nPop: {}\nStockpiles: {:?}\nFood: {:?}\nSell: {:?}",
+                    "{}. f: {}", //\nPop: {}\nStockpiles: {:?}\nFood: {:?}\nSell: {:?}",
                     planet.name,
                     food_amount,
                     // planet.population,
@@ -136,11 +132,11 @@ fn draw_selected_planet_info(gfx: &mut Graphics, core: &Core, font: &mut FontRen
                     // planet.market_orders,
                     // "",
                 )
-                    .as_str(),
+                .as_str(),
                 Color::GREEN,
                 position + *NAME_OFFSET,
             )
-                .expect("failed to draw stockpiles");
+            .expect("failed to draw stockpiles");
         }
     }
 }
@@ -171,11 +167,11 @@ fn draw_selected_ship_info(gfx: &mut Graphics, core: &Core, font: &mut FontRende
                     "Objective: {:?}\nStockpiles: {:?}",
                     objective, ship.inventory.items
                 )
-                    .as_str(),
+                .as_str(),
                 Color::GREEN,
                 position + *NAME_OFFSET,
             )
-                .expect("failed to draw stockpiles");
+            .expect("failed to draw stockpiles");
         }
     }
 }

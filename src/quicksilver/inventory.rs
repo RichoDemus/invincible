@@ -1,6 +1,7 @@
-use crate::quicksilver::market_calculations::Commodity;
-use std::collections::HashMap;
 use std::cmp;
+use std::collections::HashMap;
+
+use crate::quicksilver::market_calculations::Commodity;
 
 pub struct Inventory {
     pub items: HashMap<Commodity, u64>,
@@ -11,13 +12,10 @@ impl Inventory {
     pub fn with_food_and_capacity(food: u64, capacity: u64) -> Self {
         let mut items = HashMap::new();
         items.insert(Commodity::Food, food);
-        Inventory{
-            items,
-            capacity,
-        }
+        Inventory { items, capacity }
     }
     pub fn with_capacity(capacity: u64) -> Self {
-        Inventory{
+        Inventory {
             items: HashMap::new(),
             capacity,
         }
@@ -42,7 +40,7 @@ impl Inventory {
     }
 
     pub fn space_left(&self) -> u64 {
-        let size:u64 = self.items.values().sum();
+        let size: u64 = self.items.values().sum();
         self.capacity - size
     }
 }

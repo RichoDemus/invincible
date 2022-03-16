@@ -2,19 +2,20 @@ use std::collections::HashMap;
 
 use nalgebra::Point2;
 use ncollide2d::shape::Ball;
+use quicksilver::log;
 use rand::prelude::StdRng;
 use rand::Rng;
 use uuid::Uuid;
-use quicksilver::log;
 
-use crate::quicksilver::{HEIGHT, WIDTH, market_calculations};
-use crate::quicksilver::market_calculations::{Commodity, BuyOrder, SellOrder, MarketOrder};
-use crate::quicksilver::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
 use crate::quicksilver::core::Core;
 use crate::quicksilver::inventory::Inventory;
 use crate::quicksilver::market::market_order_resolver;
 use crate::quicksilver::market::market_order_resolver::Transaction;
-
+use crate::quicksilver::market_calculations::{BuyOrder, Commodity, MarketOrder, SellOrder};
+use crate::quicksilver::selectability::{
+    PositionAndShape, Selectable, SelectableAndPositionAndShape,
+};
+use crate::quicksilver::{market_calculations, HEIGHT, WIDTH};
 
 pub struct Planet {
     pub id: Uuid,
@@ -70,7 +71,7 @@ impl Planet {
         }
     }
 
-    pub fn tick_day(&mut self) -> Vec<Transaction>{
+    pub fn tick_day(&mut self) -> Vec<Transaction> {
         if self.water {
             self.items.add(Commodity::Food, 100);
         }
@@ -82,43 +83,57 @@ impl Planet {
         {
             let current_food = self.items.get(&Commodity::Food);
 
-                    if current_food < 1 {
-                        //starvation
-                        self.population = self.population.saturating_sub(1);
-                    } else {
-                        self.items.remove(Commodity::Food, self.population);
-                    }
+            if current_food < 1 {
+                //starvation
+                self.population = self.population.saturating_sub(1);
+            } else {
+                self.items.remove(Commodity::Food, self.population);
+            }
         }
 
         update_market_orders(self)
     }
 
-    pub fn days_until_starvation(&self) ->u64 {
-        self.items.get(&Commodity::Food).checked_div(self.population).unwrap_or(0)
+    pub fn days_until_starvation(&self) -> u64 {
+        self.items
+            .get(&Commodity::Food)
+            .checked_div(self.population)
+            .unwrap_or(0)
     }
 
-    pub fn add_and_process_market_order(&mut self, order: MarketOrder) -> Vec<Transaction>{
+    pub fn add_and_process_market_order(&mut self, order: MarketOrder) -> Vec<Transaction> {
         // assert_ne!(order.price(), 0, "Tried to put a market order with zero price");
-        assert_ne!(order.amount(), 0, "Tried to put a market order with zero amount: {:?}", order);
+        assert_ne!(
+            order.amount(),
+            0,
+            "Tried to put a market order with zero amount: {:?}",
+            order
+        );
 
         let orders = std::mem::replace(&mut self.market_orders, vec![]);
 
-        let (orders, transactions ) = market_order_resolver::resolve_orders(orders, order);
+        let (orders, transactions) = market_order_resolver::resolve_orders(orders, order);
         let _ = std::mem::replace(&mut self.market_orders, orders);
         transactions
     }
 
     pub fn num_buy_orders(&self) -> usize {
-        self.market_orders.iter().filter(|order| match order {
-            MarketOrder::BuyOrder(_) => true,
-            MarketOrder::SellOrder(_) => false,
-        }).count()
+        self.market_orders
+            .iter()
+            .filter(|order| match order {
+                MarketOrder::BuyOrder(_) => true,
+                MarketOrder::SellOrder(_) => false,
+            })
+            .count()
     }
     pub fn num_sell_orders(&self) -> usize {
-        self.market_orders.iter().filter(|order| match order {
-            MarketOrder::BuyOrder(_) => false,
-            MarketOrder::SellOrder(_) => true,
-        }).count()
+        self.market_orders
+            .iter()
+            .filter(|order| match order {
+                MarketOrder::BuyOrder(_) => false,
+                MarketOrder::SellOrder(_) => true,
+            })
+            .count()
     }
 }
 
@@ -146,21 +161,24 @@ impl PositionAndShape for Planet {
 
 // todo check that this is correct
 fn update_market_orders(planet: &mut Planet) -> Vec<Transaction> {
-
     // remove all orders placed by this planet
     let planet_id = planet.id;
-    planet.market_orders.retain(|order| order.owner() != planet_id);
+    planet
+        .market_orders
+        .retain(|order| order.owner() != planet_id);
 
     // decide our desired range of each commodity and update market orders accordingly
     let food_required_to_last_one_year = planet.population * 365;
 
-    adjust_market_orders(Commodity::Food, &mut planet.market_orders, planet.items.get(&Commodity::Food) as i64, food_required_to_last_one_year as i64);
-
-
-
+    adjust_market_orders(
+        Commodity::Food,
+        &mut planet.market_orders,
+        planet.items.get(&Commodity::Food) as i64,
+        food_required_to_last_one_year as i64,
+    );
 
     let mut transactions = vec![];
-    let desired_food:u64 = 800;
+    let desired_food: u64 = 800;
     let food_amount = planet.items.get(&Commodity::Food);
     let two_thirds_food = food_amount.checked_div(3).unwrap_or(0) * 3;
     let missing_food = desired_food.saturating_sub(food_amount);
@@ -168,7 +186,9 @@ fn update_market_orders(planet: &mut Planet) -> Vec<Transaction> {
         // not missing any food, make sure we have no buy orders
         log::info!("{} isn't missing food, remove buy orders", planet.name);
         let maybe_pos = planet.market_orders.iter().position(|order| match order {
-            MarketOrder::BuyOrder(order) => order.buyer == planet.id && order.commodity == Commodity::Food,
+            MarketOrder::BuyOrder(order) => {
+                order.buyer == planet.id && order.commodity == Commodity::Food
+            }
             MarketOrder::SellOrder(_) => false,
         });
         if let Some(pos) = maybe_pos {
@@ -176,7 +196,11 @@ fn update_market_orders(planet: &mut Planet) -> Vec<Transaction> {
         }
     } else {
         //missing food, remove current buy order and create a new one
-        log::info!("{} is missing {} food, cancel/create buy order", planet.name, missing_food);
+        log::info!(
+            "{} is missing {} food, cancel/create buy order",
+            planet.name,
+            missing_food
+        );
         let planet_id = planet.id;
         planet.market_orders.retain(|order| {
             // we wanna remove our buy order for food
@@ -187,58 +211,82 @@ fn update_market_orders(planet: &mut Planet) -> Vec<Transaction> {
                     } else {
                         true
                     }
-                },
+                }
                 MarketOrder::SellOrder(_) => true,
             }
         });
 
-        let mut new_transactions = planet.add_and_process_market_order(MarketOrder::BuyOrder(BuyOrder {
-            id: Uuid::new_v4(),
-            commodity: Commodity::Food,
-            buyer: planet.id,
-            location: planet.id,
-            position: planet.position.clone(),
-            amount: missing_food,
-            price: market_calculations::calculate_basic_buying_price(food_amount, desired_food, 0,0),
-        }));
+        let mut new_transactions =
+            planet.add_and_process_market_order(MarketOrder::BuyOrder(BuyOrder {
+                id: Uuid::new_v4(),
+                commodity: Commodity::Food,
+                buyer: planet.id,
+                location: planet.id,
+                position: planet.position.clone(),
+                amount: missing_food,
+                price: market_calculations::calculate_basic_buying_price(
+                    food_amount,
+                    desired_food,
+                    0,
+                    0,
+                ),
+            }));
         transactions.append(&mut new_transactions);
     }
 
     if planet.days_until_starvation() < 5 {
         // remove sell order
         let maybe_pos = planet.market_orders.iter().position(|order| match order {
-            MarketOrder::SellOrder(order) => order.seller == planet.id && order.commodity == Commodity::Food,
+            MarketOrder::SellOrder(order) => {
+                order.seller == planet.id && order.commodity == Commodity::Food
+            }
             MarketOrder::BuyOrder(_) => false,
         });
         if let Some(pos) = maybe_pos {
             planet.market_orders.remove(pos);
         }
-    } else if two_thirds_food != 0{
+    } else if two_thirds_food != 0 {
         //enough food to sell, adjust sell order
-        let pos = planet.market_orders.iter()
+        let pos = planet
+            .market_orders
+            .iter()
             .filter_map(|order| match order {
                 MarketOrder::BuyOrder(_) => None,
                 MarketOrder::SellOrder(order) => Some(order),
             })
-            .position(|order|order.seller == planet.id && order.commodity == Commodity::Food);
+            .position(|order| order.seller == planet.id && order.commodity == Commodity::Food);
         match pos {
             None => {
-                let mut new_transactions = planet.add_and_process_market_order(MarketOrder::SellOrder(SellOrder {
-                    id: Uuid::new_v4(),
-                    commodity: Commodity::Food,
-                    seller: planet.id,
-                    location: planet.id,
-                    position: planet.position.clone(),
-                    amount: two_thirds_food,
-                    price: market_calculations::calculate_basic_selling_price(food_amount, desired_food, 0,0),
-                }));
+                let mut new_transactions =
+                    planet.add_and_process_market_order(MarketOrder::SellOrder(SellOrder {
+                        id: Uuid::new_v4(),
+                        commodity: Commodity::Food,
+                        seller: planet.id,
+                        location: planet.id,
+                        position: planet.position.clone(),
+                        amount: two_thirds_food,
+                        price: market_calculations::calculate_basic_selling_price(
+                            food_amount,
+                            desired_food,
+                            0,
+                            0,
+                        ),
+                    }));
                 transactions.append(&mut new_transactions);
             }
             Some(pos) => {
-                let order = planet.market_orders.get_mut(pos).expect("Should be a thing here");
+                let order = planet
+                    .market_orders
+                    .get_mut(pos)
+                    .expect("Should be a thing here");
                 if let MarketOrder::SellOrder(sell_order) = order {
                     sell_order.amount = two_thirds_food;
-                    sell_order.price = market_calculations::calculate_basic_selling_price(food_amount, desired_food, 0, 0);
+                    sell_order.price = market_calculations::calculate_basic_selling_price(
+                        food_amount,
+                        desired_food,
+                        0,
+                        0,
+                    );
                 }
             }
         }
@@ -246,19 +294,27 @@ fn update_market_orders(planet: &mut Planet) -> Vec<Transaction> {
     transactions
 }
 
-fn calc_desired_food(pop:u64) -> u64 {
+fn calc_desired_food(pop: u64) -> u64 {
     100 * pop
 }
 
-fn adjust_market_orders(commodity: Commodity, market: &mut Vec<MarketOrder>, current_amount:i64, target_amount: i64) -> Vec<Transaction> {
+fn adjust_market_orders(
+    commodity: Commodity,
+    market: &mut Vec<MarketOrder>,
+    current_amount: i64,
+    target_amount: i64,
+) -> Vec<Transaction> {
     let missing_amount = target_amount - current_amount;
 
-    let missing_ratio = 1. / (missing_amount as f64/ current_amount as f64);
+    let missing_ratio = 1. / (missing_amount as f64 / current_amount as f64);
     println!("missing ratio = {}", missing_ratio);
     let buy_price = 0;
     let sell_price = 0;
 
-    println!("food. amount: {}, target: {}, missing: {}. sell price: {}, buy_price_ {}", current_amount, target_amount, missing_amount, sell_price, buy_price);
+    println!(
+        "food. amount: {}, target: {}, missing: {}. sell price: {}, buy_price_ {}",
+        current_amount, target_amount, missing_amount, sell_price, buy_price
+    );
     // panic!();
 
     // if missing_amount == 0 {
@@ -302,14 +358,14 @@ fn adjust_market_orders(commodity: Commodity, market: &mut Vec<MarketOrder>, cur
     //     transactions.append(&mut new_transactions);
     // }
 
-
     vec![]
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::quicksilver::util::uuid;
+
+    use super::*;
 
     #[test]
     fn should_not_have_buy_order_if_sufficient_food() {

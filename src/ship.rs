@@ -1,11 +1,13 @@
+use std::ops::Not;
+
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
-use crate::v2::commodity::Commodity;
-use crate::v2::market::Market;
-use std::ops::Not;
+
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
 use crate::planet::Planet;
+use crate::v2::commodity::Commodity;
+use crate::v2::market::Market;
 use crate::v2::store::Store;
 
 pub struct ShipPlugin;
@@ -29,14 +31,23 @@ struct ActionQueue {
 
 #[derive(Debug)]
 enum ShipAction {
-    Buy {planet_to_buy_at: Entity, store: Entity, commodity: Commodity},
-    Sell {planet_to_sell_at: Entity, store: Entity, commodity: Commodity},
+    Buy {
+        planet_to_buy_at: Entity,
+        store: Entity,
+        commodity: Commodity,
+    },
+    Sell {
+        planet_to_sell_at: Entity,
+        store: Entity,
+        commodity: Commodity,
+    },
 }
 
 fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
     commands
         .spawn_bundle(GeometryBuilder::build_as(
-            &shapes::Circle { // todo, triangle instead of circle
+            &shapes::Circle {
+                // todo, triangle instead of circle
                 radius: 5.,
                 center: Vec2::default(),
             },
@@ -60,7 +71,7 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
                     TextAlignment {
                         vertical: VerticalAlign::Center,
                         horizontal: HorizontalAlign::Center,
-                    }
+                    },
                 ),
                 transform: Transform::from_xyz(0., -15., 0.),
                 ..Default::default()
@@ -76,26 +87,51 @@ fn ship_decision_system(
     let food = Commodity::Food;
     for mut action_queue in action_queues.iter_mut() {
         if action_queue.queue.is_empty().not() {
-            continue
+            continue;
         }
 
-        let (seller, seller_planet, sell_price) = stores.iter()
-            .filter_map(|(entity, parent,store)|store.price_check_buy_from_store(&food).map(|credits|(entity, parent,credits)))
-            .min_by_key(|(_,_,price)|*price)
+        let (seller, seller_planet, sell_price) = stores
+            .iter()
+            .filter_map(|(entity, parent, store)| {
+                store
+                    .price_check_buy_from_store(&food)
+                    .map(|credits| (entity, parent, credits))
+            })
+            .min_by_key(|(_, _, price)| *price)
             .expect("Should be a store to buy from");
 
-        let (buyer, buyer_planet, buy_price) = stores.iter()
-            .filter_map(|(entity, parent, store)|store.price_check_sell_to_store(&food).map(|credits|(entity, parent, credits)))
-            .max_by_key(|(_,_,price)|*price)
+        let (buyer, buyer_planet, buy_price) = stores
+            .iter()
+            .filter_map(|(entity, parent, store)| {
+                store
+                    .price_check_sell_to_store(&food)
+                    .map(|credits| (entity, parent, credits))
+            })
+            .max_by_key(|(_, _, price)| *price)
             .expect("Should be a store to sell to");
 
-        action_queue.queue.push(ShipAction::Buy { planet_to_buy_at: seller_planet.0, store: seller, commodity: food });
-        action_queue.queue.push(ShipAction::Sell { planet_to_sell_at: buyer_planet.0, store: buyer, commodity: food });
+        action_queue.queue.push(ShipAction::Buy {
+            planet_to_buy_at: seller_planet.0,
+            store: seller,
+            commodity: food,
+        });
+        action_queue.queue.push(ShipAction::Sell {
+            planet_to_sell_at: buyer_planet.0,
+            store: buyer,
+            commodity: food,
+        });
 
-        let seller_name = names.get_component::<Name>(seller_planet.0).expect("No name for seller");
-        let buyer_name = names.get_component::<Name>(buyer_planet.0).expect("No name for seller");
+        let seller_name = names
+            .get_component::<Name>(seller_planet.0)
+            .expect("No name for seller");
+        let buyer_name = names
+            .get_component::<Name>(buyer_planet.0)
+            .expect("No name for seller");
 
-        info!("New trade, buy {:?} at {:?} for {}, sell att {:?} for {}", food, seller_name, sell_price, buyer_name, buy_price);
+        info!(
+            "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
+            food, seller_name, sell_price, buyer_name, buy_price
+        );
     }
 }
 
@@ -106,20 +142,32 @@ fn move_ship_towards_objective(
 ) {
     for (mut ship_transform, mut action_queue) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
-            continue
+            continue;
         }
 
         let action = action_queue.queue.first().expect("There's a action here");
 
         let destination_entity = match action {
-            ShipAction::Buy {planet_to_buy_at: seller, .. } => seller,
-            ShipAction::Sell {planet_to_sell_at: buyer, .. } => buyer,
+            ShipAction::Buy {
+                planet_to_buy_at: seller,
+                ..
+            } => seller,
+            ShipAction::Sell {
+                planet_to_sell_at: buyer,
+                ..
+            } => buyer,
         };
 
-        let destination_transform = planets.get_component::<Transform>(*destination_entity).expect("Planet has an entity");
+        let destination_transform = planets
+            .get_component::<Transform>(*destination_entity)
+            .expect("Planet has an entity");
 
-        if destination_transform.translation.distance(ship_transform.translation) < 20. {
-            continue
+        if destination_transform
+            .translation
+            .distance(ship_transform.translation)
+            < 20.
+        {
+            continue;
         }
 
         // move towards destination
@@ -138,36 +186,60 @@ fn trade_with_planet(
     let food = Commodity::Food;
     for (mut ship_transform, mut action_queue) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
-            continue
+            continue;
         }
 
         let action = action_queue.queue.first().expect("There's a action here");
 
         let destination_entity = match action {
-            ShipAction::Buy {planet_to_buy_at: seller, .. } => seller,
-            ShipAction::Sell {planet_to_sell_at: buyer, .. } => buyer,
+            ShipAction::Buy {
+                planet_to_buy_at: seller,
+                ..
+            } => seller,
+            ShipAction::Sell {
+                planet_to_sell_at: buyer,
+                ..
+            } => buyer,
         };
 
-        let destination_transform = planets.get_component::<Transform>(*destination_entity).expect("Planet has an entity");
+        let destination_transform = planets
+            .get_component::<Transform>(*destination_entity)
+            .expect("Planet has an entity");
 
-        if destination_transform.translation.distance(ship_transform.translation) > 20. {
-            continue
+        if destination_transform
+            .translation
+            .distance(ship_transform.translation)
+            > 20.
+        {
+            continue;
         }
 
         // we're at the right planet
         match action {
-            ShipAction::Buy { store, commodity , ..} => {
-                let mut store = stores.get_component_mut::<Store>(*store).expect("Should be a store here");
-                let receipt = store.buy_from_store(food, 1, None).expect("should've managed a buy");
+            ShipAction::Buy {
+                store, commodity, ..
+            } => {
+                let mut store = stores
+                    .get_component_mut::<Store>(*store)
+                    .expect("Should be a store here");
+                let receipt = store
+                    .buy_from_store(food, 1, None)
+                    .expect("should've managed a buy");
                 action_queue.queue.remove(0);
                 info!("Bought {:?} for {}", receipt.commodity, receipt.price);
-            },
-            ShipAction::Sell { store, commodity , ..} => {
-                let mut store = stores.get_component_mut::<Store>(*store).expect("Should be a store here");
-                let receipt = store.sell_to_store(food, 1, None).expect("should've managed a sell");
+            }
+            ShipAction::Sell {
+                store, commodity, ..
+            } => {
+                let mut store = stores
+                    .get_component_mut::<Store>(*store)
+                    .expect("Should be a store here");
+                let receipt = store
+                    .sell_to_store(food, 1, None)
+                    .expect("should've managed a sell");
                 action_queue.queue.remove(0);
                 info!("Sold {:?} for {}", receipt.commodity, receipt.price);
-            },
+            }
         }
     }
 }

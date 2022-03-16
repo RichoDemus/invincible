@@ -5,17 +5,19 @@ use itertools::Itertools;
 use nalgebra::{Isometry2, Point, Point2, Vector2};
 use ncollide2d::query::PointQuery;
 use ncollide2d::shape::Ball;
+use quicksilver::log;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 use uuid::Uuid;
-use quicksilver::log;
 
-use crate::quicksilver::ship::{Ship, ShipDecision};
-use crate::quicksilver::planet::Planet;
-use crate::quicksilver::selectability::{Selectable, PositionAndShape, SelectableAndPositionAndShape};
 use crate::quicksilver::market_calculations::MarketOrder;
+use crate::quicksilver::planet::Planet;
 use crate::quicksilver::projections;
 use crate::quicksilver::projections::{add_id_name_mapping, id_to_name};
+use crate::quicksilver::selectability::{
+    PositionAndShape, Selectable, SelectableAndPositionAndShape,
+};
+use crate::quicksilver::ship::{Ship, ShipDecision};
 
 pub struct Core {
     pub ships: HashMap<Uuid, Ship>,
@@ -63,41 +65,41 @@ impl Core {
         let mut rng = StdRng::seed_from_u64(0);
 
         let planets = vec![
-                Planet {
-                    name: "Foodsies".to_owned(),
-                    water: true,
-                    position: Point2::new(400., 400.),
-                    population: 5,
-                    ..Planet::default()
-                },
-                Planet {
-                    name: "Biggo".to_owned(),
-                    water: false,
-                    position: Point2::new(600., 400.),
-                    population: 5,
-                    ..Planet::default()
-                },
-                Planet {
-                    name: "Smallo".to_owned(),
-                    water: false,
-                    position: Point2::new(500., 600.),
-                    population: 1,
-                    hydrogen: true,
-                    ..Planet::default()
-                },
-                Planet {
-                    name: "Fjool".to_owned(),
-                    water: false,
-                    position: Point2::new(700., 600.),
-                    population: 1,
-                    fuel_plant:true,
-                    ..Planet::default()
-                },
+            Planet {
+                name: "Foodsies".to_owned(),
+                water: true,
+                position: Point2::new(400., 400.),
+                population: 5,
+                ..Planet::default()
+            },
+            Planet {
+                name: "Biggo".to_owned(),
+                water: false,
+                position: Point2::new(600., 400.),
+                population: 5,
+                ..Planet::default()
+            },
+            Planet {
+                name: "Smallo".to_owned(),
+                water: false,
+                position: Point2::new(500., 600.),
+                population: 1,
+                hydrogen: true,
+                ..Planet::default()
+            },
+            Planet {
+                name: "Fjool".to_owned(),
+                water: false,
+                position: Point2::new(700., 600.),
+                population: 1,
+                fuel_plant: true,
+                ..Planet::default()
+            },
         ];
 
         for planet in planets {
-                add_id_name_mapping(planet.id, planet.name.clone());
-                self.planets.insert(planet.id, planet);
+            add_id_name_mapping(planet.id, planet.name.clone());
+            self.planets.insert(planet.id, planet);
         }
 
         // for _ in 0..10 {
@@ -113,7 +115,6 @@ impl Core {
             add_id_name_mapping(id, ship.name.clone());
             self.ships.insert(id, ship);
         }
-
     }
 
     pub fn tick_day(&mut self) {
@@ -125,27 +126,40 @@ impl Core {
         for planet in self.planets.values_mut() {
             let mut new_transactions = planet.tick_day();
             transactions.append(&mut new_transactions);
-
         }
 
         for transaction in transactions {
             // todo do this with fancy market_actor trait?
-            match (self.planets.get_mut(&transaction.seller), self.ships.get_mut(&transaction.seller)) {
-                (Some(seller), None) => seller.items.remove(transaction.commodity, transaction.amount),
-                (None, Some(seller)) => seller.inventory.remove(transaction.commodity, transaction.amount),
+            match (
+                self.planets.get_mut(&transaction.seller),
+                self.ships.get_mut(&transaction.seller),
+            ) {
+                (Some(seller), None) => seller
+                    .items
+                    .remove(transaction.commodity, transaction.amount),
+                (None, Some(seller)) => seller
+                    .inventory
+                    .remove(transaction.commodity, transaction.amount),
                 _ => panic!("no seller for transaction: {:?}", transaction),
             };
 
-            match (self.planets.get_mut(&transaction.buyer), self.ships.get_mut(&transaction.buyer)) {
+            match (
+                self.planets.get_mut(&transaction.buyer),
+                self.ships.get_mut(&transaction.buyer),
+            ) {
                 (Some(buyer), None) => buyer.items.add(transaction.commodity, transaction.amount),
-                (None, Some(buyer)) => buyer.inventory.add(transaction.commodity, transaction.amount),
+                (None, Some(buyer)) => buyer
+                    .inventory
+                    .add(transaction.commodity, transaction.amount),
                 _ => panic!("no buyer for transaction: {:?}", transaction),
             };
-
         }
 
-        let market_orders = self.planets.values().flat_map(|planet|planet.market_orders.clone()).collect::<Vec<_>>();
-
+        let market_orders = self
+            .planets
+            .values()
+            .flat_map(|planet| planet.market_orders.clone())
+            .collect::<Vec<_>>();
 
         let mut transactions = vec![];
         for ship in self.ships.values_mut() {
@@ -154,34 +168,52 @@ impl Core {
             match decision {
                 ShipDecision::Buy(buy) => {
                     log::info!("{} put buy order {:?}", ship.name, buy);
-                    let mut new_transactions = self.planets.get_mut(&buy.location).expect("Should be a planet here").add_and_process_market_order(MarketOrder::BuyOrder(buy));
+                    let mut new_transactions = self
+                        .planets
+                        .get_mut(&buy.location)
+                        .expect("Should be a planet here")
+                        .add_and_process_market_order(MarketOrder::BuyOrder(buy));
                     transactions.append(&mut new_transactions);
-                },
+                }
                 ShipDecision::Sell(sell) => {
                     println!("Put sell order {:?}", sell);
-                    let mut new_transactions = self.planets.get_mut(&sell.location).expect("Should be a planet here").add_and_process_market_order(MarketOrder::SellOrder(sell));
+                    let mut new_transactions = self
+                        .planets
+                        .get_mut(&sell.location)
+                        .expect("Should be a planet here")
+                        .add_and_process_market_order(MarketOrder::SellOrder(sell));
                     transactions.append(&mut new_transactions);
-                },
-                ShipDecision::Nothing => {},
+                }
+                ShipDecision::Nothing => {}
             }
         }
 
         for transaction in transactions {
             // todo do this with fancy market_actor trait?
-            match (self.planets.get_mut(&transaction.seller), self.ships.get_mut(&transaction.seller)) {
-                (Some(seller), None) => seller.items.remove(transaction.commodity, transaction.amount),
-                (None, Some(seller)) => seller.inventory.remove(transaction.commodity, transaction.amount),
+            match (
+                self.planets.get_mut(&transaction.seller),
+                self.ships.get_mut(&transaction.seller),
+            ) {
+                (Some(seller), None) => seller
+                    .items
+                    .remove(transaction.commodity, transaction.amount),
+                (None, Some(seller)) => seller
+                    .inventory
+                    .remove(transaction.commodity, transaction.amount),
                 _ => panic!("no seller for transaction: {:?}", transaction),
             };
 
-            match (self.planets.get_mut(&transaction.buyer), self.ships.get_mut(&transaction.buyer)) {
+            match (
+                self.planets.get_mut(&transaction.buyer),
+                self.ships.get_mut(&transaction.buyer),
+            ) {
                 (Some(buyer), None) => buyer.items.add(transaction.commodity, transaction.amount),
-                (None, Some(buyer)) => buyer.inventory.add(transaction.commodity, transaction.amount),
+                (None, Some(buyer)) => buyer
+                    .inventory
+                    .add(transaction.commodity, transaction.amount),
                 _ => panic!("no buyer for transaction: {:?}", transaction),
             };
-
         }
-
     }
 
     pub fn tick(&mut self, _dt: f64, _camera_x_axis: f64, _camera_y_axis: f64) {
@@ -190,14 +222,15 @@ impl Core {
         }
 
         // todo cache this
-        let position_lookup: HashMap<Uuid, Point2<f64>> = self.planets.iter()
-            .map(|(id, planet)|(id.clone(), planet.position))
+        let position_lookup: HashMap<Uuid, Point2<f64>> = self
+            .planets
+            .iter()
+            .map(|(id, planet)| (id.clone(), planet.position))
             .collect();
 
         for ship in self.ships.values_mut() {
             ship.tick(&position_lookup);
         }
-
 
         // // todo remove
         // let position_lookup: HashMap<Uuid, Point2<f64>> = <(&Id, &Position)>::query()
@@ -269,39 +302,42 @@ impl Core {
     pub fn click(&mut self, click_position: Vector2<f64>) {
         const MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER: f64 = 5f64;
 
-        let planets = self.planets.values_mut().map(|planet|{
+        let planets = self.planets.values_mut().map(|planet| {
             // let selectable: &mut dyn Selectable + &mut dyn PositionAndShape = planet;
             let selectable: &mut dyn SelectableAndPositionAndShape = planet;
             selectable
         });
-        let ships = self.ships.values_mut().map(|ship|{
+        let ships = self.ships.values_mut().map(|ship| {
             let selectable: &mut dyn SelectableAndPositionAndShape = ship;
             selectable
         });
 
-        let selected_thing = planets.chain(ships)
-            .map(|planet|{
+        let selected_thing = planets
+            .chain(ships)
+            .map(|planet| {
                 //hacky, deselect everything now
                 planet.deselect();
-                    let (position, shape) = planet.position_and_shape();
-                    // let distance = shape.distance_to_point(
-                    //     &ncollide2d::Isometry2::translation(position.x, position.y),
-                    //     &Point {
-                    //         coords: click_position,
-                    //     },
-                    //     true,
-                    // )
-                let distance= 0.;
-                    (planet, distance)
+                let (position, shape) = planet.position_and_shape();
+                // let distance = shape.distance_to_point(
+                //     &ncollide2d::Isometry2::translation(position.x, position.y),
+                //     &Point {
+                //         coords: click_position,
+                //     },
+                //     true,
+                // )
+                let distance = 0.;
+                (planet, distance)
             })
-            .filter(|(_, distance) | distance < &MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER)
-            .fold1(|(left_planet, left_distance), (right_planet, right_distance)| {
-                if left_distance < right_distance {
-                    return (left_planet, left_distance)
-                } else {
-                    (right_planet, right_distance)
-                }
-            });
+            .filter(|(_, distance)| distance < &MINIMUM_CLICK_DISTANCE_TO_EVEN_CONSIDER)
+            .fold1(
+                |(left_planet, left_distance), (right_planet, right_distance)| {
+                    if left_distance < right_distance {
+                        return (left_planet, left_distance);
+                    } else {
+                        (right_planet, right_distance)
+                    }
+                },
+            );
 
         if let Some((selectable, _)) = selected_thing {
             selectable.select();

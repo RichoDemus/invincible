@@ -4,9 +4,9 @@ use bevy_prototype_lyon::prelude::*;
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
 use crate::util::OncePerSecond;
-use crate::v2::market::Market;
-use crate::v2::store::{Store, Credits};
 use crate::v2::commodity::Commodity;
+use crate::v2::market::Market;
+use crate::v2::store::{Credits, Store};
 
 pub struct PlanetPlugin;
 
@@ -26,8 +26,14 @@ pub struct Water;
 
 fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
     let planets = vec![
-        ("Terra", false, Vec2::new(100.,100.), Color::CYAN, 20.),
-        ("Agri", true, Vec2::new(-100.,-100.), Color::LIME_GREEN, 10.),
+        ("Terra", false, Vec2::new(100., 100.), Color::CYAN, 20.),
+        (
+            "Agri",
+            true,
+            Vec2::new(-100., -100.),
+            Color::LIME_GREEN,
+            10.,
+        ),
         // ("Hydro", false, Vec2::new(100.,-100.), Color::PINK, 30.),
         // ("Forge", false, Vec2::new(-100.,100.), Color::GRAY, 15.),
     ];
@@ -67,7 +73,7 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
                         TextAlignment {
                             vertical: VerticalAlign::Center,
                             horizontal: HorizontalAlign::Center,
-                        }
+                        },
                     ),
                     transform: Transform::from_xyz(0., -25., 0.),
                     ..Default::default()
@@ -81,14 +87,14 @@ fn population_buys_food(
     time: Res<Time>,
     mut once_per_second: Local<OncePerSecond>,
     mut stores: Query<&mut Store>,
-
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
         for mut store in stores.iter_mut() {
             match store.price_check_buy_from_store(&Commodity::Food) {
                 Some(price) if price < 6 => {
                     // affordable food
-                    let receipt = store.buy_from_store(Commodity::Food, 1, Some(price))
+                    let receipt = store
+                        .buy_from_store(Commodity::Food, 1, Some(price))
                         .expect("We just checked, this should work");
                     info!("People bought food: {:?}", receipt);
                 }
@@ -107,7 +113,7 @@ fn water_planet_produces_food(
     mut stores: Query<(&mut Store)>,
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
-        for (_entity, children) in water_planets.iter()  {
+        for (_entity, children) in water_planets.iter() {
             for child in children.iter() {
                 if let Ok(mut store) = stores.get_mut(*child) {
                     store.give(Commodity::Food, 10);
@@ -128,21 +134,19 @@ mod tests {
         update_stage.add_system(water_planet_produces_food.system());
 
         let time = Time::default();
-        // mock time? :S 
+        // mock time? :S
         world.insert_resource(time);
 
         let dry_planet_store_entity = world.spawn().insert(Store::default()).id();
         let water_planet_store_entity = world.spawn().insert(Store::default()).id();
 
-        let _water_world = world.spawn()
-            .push_children(&[dry_planet_store_entity])
-            .id();
+        let _water_world = world.spawn().push_children(&[dry_planet_store_entity]).id();
 
-        let _non_water_world = world.spawn()
+        let _non_water_world = world
+            .spawn()
             .insert(Water)
             .push_children(&[water_planet_store_entity])
             .id();
-
 
         let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
         let water_store = world.get::<Store>(water_planet_store_entity).unwrap();

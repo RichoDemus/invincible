@@ -17,8 +17,20 @@ mod tests {
 
     #[test]
     fn it_works() {
-        assert_eq!(uuid(0), Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(), "0");
-        assert_eq!(uuid(1), Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(), "1");
-        assert_eq!(uuid(10), Uuid::parse_str("00000000-0000-0000-0000-000000000010").unwrap(), "10");
+        assert_eq!(
+            uuid(0),
+            Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            "0"
+        );
+        assert_eq!(
+            uuid(1),
+            Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+            "1"
+        );
+        assert_eq!(
+            uuid(10),
+            Uuid::parse_str("00000000-0000-0000-0000-000000000010").unwrap(),
+            "10"
+        );
     }
 }

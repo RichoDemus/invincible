@@ -24,9 +24,9 @@ impl FromWorld for Fonts {
 
 pub(crate) struct Sprites {
     // pub(crate) pawn: Handle<TextureAtlas>,
-    // pub(crate) trees: Handle<TextureAtlas>,
-    // pub(crate) grass: Handle<TextureAtlas>,
-    // pub(crate) map: Handle<Texture>,
+// pub(crate) trees: Handle<TextureAtlas>,
+// pub(crate) grass: Handle<TextureAtlas>,
+// pub(crate) map: Handle<Texture>,
 }
 
 impl FromWorld for Sprites {

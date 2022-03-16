@@ -66,14 +66,14 @@ pub(crate) fn get_camera_position_in_world_coordinates(
     if let Some(window) = windows.get_primary() {
         if let Some(cursor_position) = window.cursor_position() {
             let global_transform = camera_query.single();
-                let norm = Vec3::new(
-                    cursor_position.x - window.width() / 2.,
-                    cursor_position.y - window.height() / 2.,
-                    0.,
-                );
+            let norm = Vec3::new(
+                cursor_position.x - window.width() / 2.,
+                cursor_position.y - window.height() / 2.,
+                0.,
+            );
 
-                let pos = *global_transform * norm;
-                return Some(pos.truncate());
+            let pos = *global_transform * norm;
+            return Some(pos.truncate());
         }
     }
     None

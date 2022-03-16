@@ -1,23 +1,25 @@
-use std::{cmp, fmt};
 use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::{cmp, fmt};
 
 use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
-use uuid::Uuid;
 use quicksilver::log;
+use uuid::Uuid;
+
 use crate::quicksilver::projections::id_to_name;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Commodity {
-    Water, Food, Hydrogen
+    Water,
+    Food,
+    Hydrogen,
 }
-
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum MarketOrder {
     BuyOrder(BuyOrder),
-    SellOrder(SellOrder)
+    SellOrder(SellOrder),
 }
 
 impl MarketOrder {
@@ -39,7 +41,7 @@ impl MarketOrder {
             MarketOrder::SellOrder(order) => order.commodity,
         }
     }
-    pub fn reduce_amount(&mut self, amount:u64) {
+    pub fn reduce_amount(&mut self, amount: u64) {
         match self {
             MarketOrder::BuyOrder(order) => order.amount -= amount,
             MarketOrder::SellOrder(order) => order.amount -= amount,
@@ -47,8 +49,12 @@ impl MarketOrder {
     }
     pub fn is_other_price_better(&self, other: &MarketOrder) -> bool {
         match (self, other) {
-            (MarketOrder::BuyOrder(left_order), MarketOrder::BuyOrder(right_order)) => left_order.price < right_order.price,
-            (MarketOrder::SellOrder(left_order), MarketOrder::SellOrder(right_order)) => left_order.price > right_order.price,
+            (MarketOrder::BuyOrder(left_order), MarketOrder::BuyOrder(right_order)) => {
+                left_order.price < right_order.price
+            }
+            (MarketOrder::SellOrder(left_order), MarketOrder::SellOrder(right_order)) => {
+                left_order.price > right_order.price
+            }
             _ => panic!("Tried to do price comparison of orders of different types"),
         }
     }
@@ -63,7 +69,7 @@ impl MarketOrder {
 
 impl From<BuyOrder> for MarketOrder {
     fn from(order: BuyOrder) -> Self {
-       MarketOrder::BuyOrder(order)
+        MarketOrder::BuyOrder(order)
     }
 }
 
@@ -83,31 +89,38 @@ pub struct BuyOrder {
     pub amount: u64,
     pub price: u64,
 }
+
 #[cfg(test)]
 impl BuyOrder {
-    pub fn from(buyer:Uuid, amount: u64, price:u64) -> MarketOrder {
+    pub fn from(buyer: Uuid, amount: u64, price: u64) -> MarketOrder {
         MarketOrder::BuyOrder(BuyOrder {
             id: Default::default(),
             commodity: Commodity::Water,
             buyer,
             location: Default::default(),
-            position: Point2::new(0.,0.),
+            position: Point2::new(0., 0.),
             amount,
             price,
         })
     }
-    pub fn from_w_commodity(buyer:Uuid, amount: u64, price:u64, commodity:Commodity) -> MarketOrder {
+    pub fn from_w_commodity(
+        buyer: Uuid,
+        amount: u64,
+        price: u64,
+        commodity: Commodity,
+    ) -> MarketOrder {
         MarketOrder::BuyOrder(BuyOrder {
             id: Default::default(),
             commodity,
             buyer,
             location: Default::default(),
-            position: Point2::new(0.,0.),
+            position: Point2::new(0., 0.),
             amount,
             price,
         })
     }
 }
+
 impl Debug for BuyOrder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Buy")
@@ -121,7 +134,7 @@ impl Debug for BuyOrder {
 }
 
 #[derive(Copy, Clone, PartialEq)]
-pub struct   SellOrder{
+pub struct SellOrder {
     pub id: Uuid,
     pub commodity: Commodity,
     pub seller: Uuid,
@@ -148,24 +161,29 @@ pub struct   SellOrder{
 
 #[cfg(test)]
 impl SellOrder {
-    pub fn from(seller:Uuid, amount: u64, price:u64) -> MarketOrder {
+    pub fn from(seller: Uuid, amount: u64, price: u64) -> MarketOrder {
         MarketOrder::SellOrder(SellOrder {
             id: Default::default(),
             commodity: Commodity::Water,
             seller,
             location: Default::default(),
-            position: Point2::new(0.,0.),
+            position: Point2::new(0., 0.),
             amount,
             price,
         })
     }
-    pub fn from_w_commodity(seller:Uuid, amount: u64, price:u64, commodity :Commodity) -> MarketOrder {
+    pub fn from_w_commodity(
+        seller: Uuid,
+        amount: u64,
+        price: u64,
+        commodity: Commodity,
+    ) -> MarketOrder {
         MarketOrder::SellOrder(SellOrder {
             id: Default::default(),
             commodity,
             seller,
             location: Default::default(),
-            position: Point2::new(0.,0.),
+            position: Point2::new(0., 0.),
             amount,
             price,
         })
@@ -206,17 +224,13 @@ pub fn calculate_basic_buying_price(
     price_float.round() as u64
 }
 
-pub fn get_sell_and_buy_price(
-    current_amount: f64,
-    target_amount: f64,
-) -> (u64, u64) {
+pub fn get_sell_and_buy_price(current_amount: f64, target_amount: f64) -> (u64, u64) {
     // let buy_price_float:f64 = 30. * (1. - target_amount as f64 / current_amount as f64);
-    let buy_price_float:f64 = 30. * target_amount / current_amount;
-    let buy_price_float:f64 = buy_price_float.round();
+    let buy_price_float: f64 = 30. * target_amount / current_amount;
+    let buy_price_float: f64 = buy_price_float.round();
 
-    let sell_price_float:f64 = 30. * current_amount / target_amount;
-    let sell_price_float:f64 = sell_price_float.round();
-
+    let sell_price_float: f64 = 30. * current_amount / target_amount;
+    let sell_price_float: f64 = sell_price_float.round();
 
     (buy_price_float as u64, sell_price_float as u64)
 }
@@ -395,7 +409,7 @@ pub fn calculate_where_to_sell_cargo(
 
             (buy_order.location, total_sell)
         })
-        .filter(|(_,amount)| amount > &0)
+        .filter(|(_, amount)| amount > &0)
         .sorted_by(|(_, left_sell_value), (_, right_sell_value)| {
             let left_sell_value: &u64 = left_sell_value;
             let right_sell_value: u64 = *right_sell_value;
@@ -407,7 +421,13 @@ pub fn calculate_where_to_sell_cargo(
         .map(|(id, _)| id)
 }
 
-pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_orders: Vec<&SellOrder>, location:Uuid) -> BuyOrder {
+pub fn create_buy_order(
+    amount: u64,
+    commodity: Commodity,
+    buyer: Uuid,
+    sell_orders: Vec<&SellOrder>,
+    location: Uuid,
+) -> BuyOrder {
     let mut amount_left = amount;
     let some_order = sell_orders.first().expect("should be an order here");
     let mut lowest_price = some_order.price;
@@ -416,7 +436,7 @@ pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_ord
         lowest_price = order.price;
         amount_left = amount_left.saturating_sub(order.amount);
         if amount_left < 1 {
-            break
+            break;
         }
     }
     assert_ne!(amount, 0, "Don't create zero amount buy orders");
@@ -427,11 +447,17 @@ pub fn create_buy_order(amount: u64, commodity: Commodity, buyer: Uuid, sell_ord
         location,
         position,
         amount,
-        price: lowest_price
+        price: lowest_price,
     }
 }
 
-pub fn create_sell_order(amount: u64, commodity: Commodity, seller: Uuid, buy_orders: Vec<&BuyOrder>, location:Uuid) -> SellOrder {
+pub fn create_sell_order(
+    amount: u64,
+    commodity: Commodity,
+    seller: Uuid,
+    buy_orders: Vec<&BuyOrder>,
+    location: Uuid,
+) -> SellOrder {
     println!("amount: {}", amount);
     let mut amount_left = amount;
     let some_order = buy_orders.first().expect("should be an order here");
@@ -441,7 +467,7 @@ pub fn create_sell_order(amount: u64, commodity: Commodity, seller: Uuid, buy_or
         highest_price = order.price;
         amount_left = amount_left.saturating_sub(order.amount);
         if amount_left < 1 {
-            break
+            break;
         }
     }
     if amount == 0 {
@@ -455,7 +481,7 @@ pub fn create_sell_order(amount: u64, commodity: Commodity, seller: Uuid, buy_or
         location,
         position,
         amount,
-        price: highest_price
+        price: highest_price,
     }
 }
 
@@ -469,9 +495,8 @@ mod tests {
 
     #[test]
     fn test_buy_and_sell_orders() {
-
         // let (buy_price, sell_price) = get_sell_and_buy_price(1000., 1000.);
-    //
+        //
 
         let inputs = vec![
             (1000., 300.),
@@ -484,77 +509,79 @@ mod tests {
         for (current_amount, target_amount) in inputs {
             let (buy_price, sell_price) = get_sell_and_buy_price(current_amount, target_amount);
 
-            println!("If we have {} food and want to have {}. buy: {} sell {}", current_amount, target_amount, buy_price, sell_price);
+            println!(
+                "If we have {} food and want to have {}. buy: {} sell {}",
+                current_amount, target_amount, buy_price, sell_price
+            );
         }
-
     }
 
-//
-//     #[test]
-//     fn it_works() {
-//         let source = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-//             position: Point2::new(20., 20.),
-//             food_buy_price: 2,
-//             food_sell_price: 7,
-//         };
-//         let destination = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-//             position: Point2::new(10., 10.),
-//             food_buy_price: 10,
-//             food_sell_price: 12,
-//         };
-//         let crappy_place = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
-//             position: Point2::new(20., 21.),
-//             food_buy_price: 2,
-//             food_sell_price: 20,
-//         };
-//         let good_but_to_far_away = MarketWithPosition {
-//             id: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
-//             position: Point2::new(200000., 20.),
-//             food_buy_price: 1,
-//             food_sell_price: 2,
-//         };
-//         let markets = vec![
-//             destination.clone(),
-//             source.clone(),
-//             crappy_place,
-//             good_but_to_far_away,
-//         ];
-//
-//         let result = get_most_profitable_route(&markets, &Point2::new(15., 15.));
-//
-//         assert_eq!(result.source.0, source.id, "wrong source");
-//         assert_eq!(result.destination, destination.id, "wrong destination");
-//     }
+    //
+    //     #[test]
+    //     fn it_works() {
+    //         let source = MarketWithPosition {
+    //             id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+    //             position: Point2::new(20., 20.),
+    //             food_buy_price: 2,
+    //             food_sell_price: 7,
+    //         };
+    //         let destination = MarketWithPosition {
+    //             id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+    //             position: Point2::new(10., 10.),
+    //             food_buy_price: 10,
+    //             food_sell_price: 12,
+    //         };
+    //         let crappy_place = MarketWithPosition {
+    //             id: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
+    //             position: Point2::new(20., 21.),
+    //             food_buy_price: 2,
+    //             food_sell_price: 20,
+    //         };
+    //         let good_but_to_far_away = MarketWithPosition {
+    //             id: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
+    //             position: Point2::new(200000., 20.),
+    //             food_buy_price: 1,
+    //             food_sell_price: 2,
+    //         };
+    //         let markets = vec![
+    //             destination.clone(),
+    //             source.clone(),
+    //             crappy_place,
+    //             good_but_to_far_away,
+    //         ];
+    //
+    //         let result = get_most_profitable_route(&markets, &Point2::new(15., 15.));
+    //
+    //         assert_eq!(result.source.0, source.id, "wrong source");
+    //         assert_eq!(result.destination, destination.id, "wrong destination");
+    //     }
 
     #[test]
     fn test_calc_where_to_buy_cargo() {
-        let best = SellOrder{
+        let best = SellOrder {
             id: uuid(0),
             commodity: Commodity::Food,
             seller: uuid(10),
             location: uuid(20),
-            position: Point2::new(1.,1.),
+            position: Point2::new(1., 1.),
             amount: 100,
             price: 10,
         };
-        let to_expensive = SellOrder{
+        let to_expensive = SellOrder {
             id: uuid(1),
             commodity: Commodity::Food,
             seller: uuid(11),
             location: uuid(21),
-            position: Point2::new(1.,1.),
+            position: Point2::new(1., 1.),
             amount: 100,
             price: 11,
         };
-        let to_far_away = SellOrder{
+        let to_far_away = SellOrder {
             id: uuid(2),
             commodity: Commodity::Food,
             seller: uuid(12),
             location: uuid(22),
-            position: Point2::new(100.,100.),
+            position: Point2::new(100., 100.),
             amount: 100,
             price: 5,
         };
@@ -573,30 +600,30 @@ mod tests {
 
     #[test]
     fn test_calculate_where_to_sell_cargo() {
-        let best = BuyOrder{
+        let best = BuyOrder {
             id: uuid(0),
             commodity: Commodity::Food,
             buyer: uuid(10),
             location: uuid(20),
-            position: Point2::new(1.,1.),
+            position: Point2::new(1., 1.),
             amount: 100,
             price: 20,
         };
-        let to_cheap = BuyOrder{
+        let to_cheap = BuyOrder {
             id: uuid(1),
             commodity: Commodity::Food,
             buyer: uuid(11),
             location: uuid(21),
-            position: Point2::new(1.,1.),
+            position: Point2::new(1., 1.),
             amount: 100,
             price: 10,
         };
-        let to_far_away = BuyOrder{
+        let to_far_away = BuyOrder {
             id: uuid(2),
             commodity: Commodity::Food,
             buyer: uuid(12),
             location: uuid(22),
-            position: Point2::new(100.,100.),
+            position: Point2::new(100., 100.),
             amount: 100,
             price: 40,
         };
@@ -615,23 +642,23 @@ mod tests {
     }
 
     #[test]
-    fn test_create_buy_order(){
+    fn test_create_buy_order() {
         let cheapest = &SellOrder {
             id: Uuid::new_v4(),
             commodity: Commodity::Food,
             seller: Uuid::new_v4(),
             location: Uuid::new_v4(),
-            position: Point2::new(0.,0.),
+            position: Point2::new(0., 0.),
             amount: 50,
             price: 10,
         };
         let mid_tier = &SellOrder {
-            amount:100,
+            amount: 100,
             price: 20,
             ..cheapest.clone()
         };
         let expensive = &SellOrder {
-            amount:100,
+            amount: 100,
             price: 30,
             ..cheapest.clone()
         };

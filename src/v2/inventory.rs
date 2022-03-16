@@ -24,10 +24,7 @@ impl Inventory {
     pub fn with_food_and_capacity(food: Amount, capacity: Amount) -> Self {
         let mut items = HashMap::new();
         items.insert(Commodity::Food, food);
-        Inventory {
-            items,
-            capacity,
-        }
+        Inventory { items, capacity }
     }
     pub fn with_capacity(capacity: Amount) -> Self {
         Inventory {

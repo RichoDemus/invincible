@@ -1,10 +1,11 @@
-use bevy::prelude::*;
-use crate::v2::inventory::Inventory;
-use crate::v2::commodity::Commodity;
 use std::collections::HashMap;
 
-use crate::v2::inventory::Amount;
+use bevy::prelude::*;
 use uuid::Uuid;
+
+use crate::v2::commodity::Commodity;
+use crate::v2::inventory::Amount;
+use crate::v2::inventory::Inventory;
 
 pub type Credits = u64;
 
@@ -43,14 +44,18 @@ impl Store {
         let _ = self.inventory.take(commodity, amount);
     }
 
-    pub fn buy_from_store(&mut self, commodity: Commodity, amount: Amount, price: Option<Credits>) -> Option<Receipt> {
+    pub fn buy_from_store(
+        &mut self,
+        commodity: Commodity,
+        amount: Amount,
+        price: Option<Credits>,
+    ) -> Option<Receipt> {
         if self.inventory.get(&commodity) < amount {
             // Not enough of that commodity
-            return None
+            return None;
         }
         match self.price_check_buy_from_store(&commodity) {
-            None =>
-                None,
+            None => None,
 
             Some(store_price) => {
                 if price.is_none() {
@@ -72,10 +77,14 @@ impl Store {
         }
     }
 
-    pub fn sell_to_store(&mut self, commodity: Commodity, amount: Amount, price: Option<Credits>) -> Option<Receipt> {
+    pub fn sell_to_store(
+        &mut self,
+        commodity: Commodity,
+        amount: Amount,
+        price: Option<Credits>,
+    ) -> Option<Receipt> {
         match self.price_check_sell_to_store(&commodity) {
-            None =>
-                None,
+            None => None,
 
             Some(store_price) => {
                 if price.is_none() {
@@ -95,10 +104,9 @@ impl Store {
                 }
             }
         }
-
     }
 
-    pub fn price_check_buy_from_store(&self, commodity: &Commodity) ->  Option<Credits> {
+    pub fn price_check_buy_from_store(&self, commodity: &Commodity) -> Option<Credits> {
         debug_assert_eq!(commodity, &Commodity::Food);
         if self.magically_produces_food {
             Some(2)
@@ -107,7 +115,7 @@ impl Store {
         }
     }
 
-    pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits>{
+    pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits> {
         debug_assert_eq!(commodity, &Commodity::Food);
         if self.magically_produces_food {
             Some(1)
@@ -116,7 +124,7 @@ impl Store {
         }
     }
 
-    fn list(&self) ->  &HashMap<Commodity, Amount> {
+    fn list(&self) -> &HashMap<Commodity, Amount> {
         &self.inventory.items
     }
 }
@@ -148,16 +156,20 @@ mod tests {
     #[test]
     fn buy_some_food() {
         let mut store = Store {
-          magically_produces_food: true,
+            magically_produces_food: true,
             ..Store::default()
         };
 
         store.give(Commodity::Food, 100);
 
-        let buy_price = store.price_check_buy_from_store(&Commodity::Food).expect("Should be able to buy food");
+        let buy_price = store
+            .price_check_buy_from_store(&Commodity::Food)
+            .expect("Should be able to buy food");
         assert!(buy_price > 0);
 
-        let receipt = store.buy_from_store(Commodity::Food, 10, Some(buy_price)).expect("Store should've accepted this sale");
+        let receipt = store
+            .buy_from_store(Commodity::Food, 10, Some(buy_price))
+            .expect("Store should've accepted this sale");
 
         assert_eq!(receipt.commodity, Commodity::Food);
         assert_eq!(receipt.amount, 10);
@@ -173,10 +185,14 @@ mod tests {
 
         store.give(Commodity::Food, 100);
 
-        let sell_price = store.price_check_sell_to_store(&Commodity::Food).expect("Should be able to sell food");
+        let sell_price = store
+            .price_check_sell_to_store(&Commodity::Food)
+            .expect("Should be able to sell food");
         assert!(sell_price > 0);
 
-        let receipt = store.sell_to_store(Commodity::Food, 10, Some(sell_price)).expect("Store should've accepted this sale");
+        let receipt = store
+            .sell_to_store(Commodity::Food, 10, Some(sell_price))
+            .expect("Store should've accepted this sale");
 
         assert_eq!(receipt.commodity, Commodity::Food);
         assert_eq!(receipt.amount, 10);

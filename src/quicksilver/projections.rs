@@ -1,13 +1,14 @@
+use std::collections::hash_map::RandomState;
+
+use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use uuid::Uuid;
-use std::collections::hash_map::RandomState;
-use dashmap::mapref::one::Ref;
 
 lazy_static! {
-    pub static ref ID_TO_NAME:DashMap<Uuid, String> = DashMap::new();
+    pub static ref ID_TO_NAME: DashMap<Uuid, String> = DashMap::new();
 }
 
-pub fn add_id_name_mapping(id:Uuid, name: String) {
+pub fn add_id_name_mapping(id: Uuid, name: String) {
     ID_TO_NAME.insert(id, name);
 }
 
