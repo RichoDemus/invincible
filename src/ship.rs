@@ -86,8 +86,7 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
 
 fn ship_decision_system(
     mut action_queues: Query<&mut ActionQueue>,
-    stores: Query<(Entity, &Parent, &Store)>,
-    names: Query<&Name>,
+    stores: Query<(Entity, &Planet, &Store, &Name)>,
 ) {
     let food = Commodity::Food;
     for mut action_queue in action_queues.iter_mut() {
@@ -95,48 +94,43 @@ fn ship_decision_system(
             continue;
         }
 
-        let (seller, seller_planet, sell_price): (Entity, &Parent, u64) = stores
-            .iter()
-            .filter_map(|(entity, parent, store)| {
-                store
-                    .price_check_buy_from_store(&food)
-                    .map(|credits| (entity, parent, credits))
-            })
-            .min_by_key(|(_, _, price)| *price)
-            .expect("Should be a store to buy from");
+        let (seller, seller_planet, sell_price, seller_planet_name): (Entity, &Planet, u64, &Name) =
+            stores
+                .iter()
+                .filter_map(|(entity, parent, store, name)| {
+                    store
+                        .price_check_buy_from_store(&food)
+                        .map(|credits| (entity, parent, credits, name))
+                })
+                .min_by_key(|(_, _, price, _)| *price)
+                .expect("Should be a store to buy from");
 
-        let (buyer, buyer_planet, buy_price): (Entity, &Parent, u64) = stores
-            .iter()
-            .filter_map(|(entity, parent, store)| {
-                store
-                    .price_check_sell_to_store(&food)
-                    .map(|credits| (entity, parent, credits))
-            })
-            .max_by_key(|(_, _, price)| *price)
-            .expect("Should be a store to sell to");
-        debug_assert_ne!(seller_planet.0, buyer_planet.0);
+        let (buyer, buyer_planet, buy_price, buyer_planet_name): (Entity, &Planet, u64, &Name) =
+            stores
+                .iter()
+                .filter_map(|(entity, parent, store, name)| {
+                    store
+                        .price_check_sell_to_store(&food)
+                        .map(|credits| (entity, parent, credits, name))
+                })
+                .max_by_key(|(_, _, price, _)| *price)
+                .expect("Should be a store to sell to");
+        debug_assert_ne!(seller, buyer);
 
         action_queue.queue.push(ShipAction::Buy {
-            planet_to_buy_at: seller_planet.0,
+            planet_to_buy_at: seller,
             store: seller,
             commodity: food,
         });
         action_queue.queue.push(ShipAction::Sell {
-            planet_to_sell_at: buyer_planet.0,
+            planet_to_sell_at: buyer,
             store: buyer,
             commodity: food,
         });
 
-        let seller_name = names
-            .get_component::<Name>(seller_planet.0)
-            .expect("No name for seller");
-        let buyer_name = names
-            .get_component::<Name>(buyer_planet.0)
-            .expect("No name for seller");
-
         info!(
             "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
-            food, seller_name, sell_price, buyer_name, buy_price
+            food, seller_planet_name, sell_price, buyer_planet_name, buy_price
         );
     }
 }

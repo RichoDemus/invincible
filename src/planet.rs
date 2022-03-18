@@ -56,14 +56,15 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
             planet.insert(Water);
         }
         planet
+            .insert(Planet)
             .insert(Transform::from_translation(position.extend(0.)))
             .insert(Name(name.to_string()))
             .insert(Selectable::default())
+            .insert(Store {
+                magically_produces_food: magical_food,
+                ..Store::default()
+            })
             .with_children(|parent| {
-                parent.spawn().insert(Store {
-                    magically_produces_food: magical_food,
-                    ..Store::default()
-                });
                 parent.spawn().insert_bundle(Text2dBundle {
                     text: Text::with_section(
                         name,
@@ -111,16 +112,11 @@ fn population_buys_food(
 fn water_planet_produces_food(
     time: Res<Time>,
     mut once_per_second: Local<OncePerSecond>,
-    water_planets: Query<(Entity, &Children), With<Water>>,
-    mut stores: Query<(&mut Store)>,
+    mut stores: Query<(&mut Store), With<Water>>,
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
-        for (_entity, children) in water_planets.iter() {
-            for child in children.iter() {
-                if let Ok(mut store) = stores.get_mut(*child) {
-                    store.give(Commodity::Food, 10);
-                }
-            }
+        for mut store in stores.iter_mut() {
+            store.give(Commodity::Food, 10);
         }
     }
 }
