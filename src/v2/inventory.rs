@@ -2,10 +2,13 @@ use std::cmp;
 use std::collections::HashMap;
 use std::ops::Not;
 
+use bevy::prelude::*;
+
 use crate::v2::commodity::Commodity;
 
 pub(crate) type Amount = u64;
 
+#[derive(Component)]
 pub struct Inventory {
     pub items: HashMap<Commodity, Amount>,
     pub capacity: Amount,

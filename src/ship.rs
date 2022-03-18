@@ -8,6 +8,7 @@ use crate::common_components::Name;
 use crate::planet::Planet;
 use crate::unit_selection::Selectable;
 use crate::v2::commodity::Commodity;
+use crate::v2::inventory::Inventory;
 use crate::v2::market::Market;
 use crate::v2::store::Store;
 
@@ -62,6 +63,7 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
         .insert(ActionQueue::default())
         .insert(Selectable::default())
         .insert(Name("Wayfarer".to_string()))
+        .insert(Inventory::with_capacity(5))
         .with_children(|parent| {
             parent.spawn().insert_bundle(Text2dBundle {
                 text: Text::with_section(
@@ -93,7 +95,7 @@ fn ship_decision_system(
             continue;
         }
 
-        let (seller, seller_planet, sell_price) = stores
+        let (seller, seller_planet, sell_price): (Entity, &Parent, u64) = stores
             .iter()
             .filter_map(|(entity, parent, store)| {
                 store
@@ -103,7 +105,7 @@ fn ship_decision_system(
             .min_by_key(|(_, _, price)| *price)
             .expect("Should be a store to buy from");
 
-        let (buyer, buyer_planet, buy_price) = stores
+        let (buyer, buyer_planet, buy_price): (Entity, &Parent, u64) = stores
             .iter()
             .filter_map(|(entity, parent, store)| {
                 store
@@ -112,6 +114,7 @@ fn ship_decision_system(
             })
             .max_by_key(|(_, _, price)| *price)
             .expect("Should be a store to sell to");
+        debug_assert_ne!(seller_planet.0, buyer_planet.0);
 
         action_queue.queue.push(ShipAction::Buy {
             planet_to_buy_at: seller_planet.0,
@@ -182,12 +185,12 @@ fn move_ship_towards_objective(
 }
 
 fn trade_with_planet(
-    mut ships: Query<(&mut Transform, &mut ActionQueue), With<Ship>>,
+    mut ships: Query<(&mut Transform, &mut ActionQueue, &mut Inventory), With<Ship>>,
     planets: Query<(Entity, &Transform), Without<Ship>>,
     mut stores: Query<(Entity, &mut Store), Without<Ship>>,
 ) {
     let food = Commodity::Food;
-    for (mut ship_transform, mut action_queue) in ships.iter_mut() {
+    for (mut ship_transform, mut action_queue, mut inventory) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
             continue;
         }
@@ -222,25 +225,29 @@ fn trade_with_planet(
             ShipAction::Buy {
                 store, commodity, ..
             } => {
+                let amount_wanted = inventory.space_left();
                 let mut store = stores
                     .get_component_mut::<Store>(*store)
                     .expect("Should be a store here");
                 let receipt = store
-                    .buy_from_store(food, 1, None)
+                    .buy_from_store(food, amount_wanted, None)
                     .expect("should've managed a buy");
                 action_queue.queue.remove(0);
+                inventory.add(receipt.commodity, receipt.amount);
                 info!("Bought {:?} for {}", receipt.commodity, receipt.price);
             }
             ShipAction::Sell {
                 store, commodity, ..
             } => {
+                let amount_to_sell = inventory.get(&food);
                 let mut store = stores
                     .get_component_mut::<Store>(*store)
                     .expect("Should be a store here");
                 let receipt = store
-                    .sell_to_store(food, 1, None)
+                    .sell_to_store(food, amount_to_sell, None)
                     .expect("should've managed a sell");
                 action_queue.queue.remove(0);
+                inventory.take(&receipt.commodity, receipt.amount);
                 info!("Sold {:?} for {}", receipt.commodity, receipt.price);
             }
         }

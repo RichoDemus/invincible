@@ -5,6 +5,7 @@ use crate::asset_loading::Sprites;
 use crate::camera::{get_camera_position_in_world_coordinates, MainCamera};
 use crate::common_components::Name;
 use crate::v2::commodity::Commodity;
+use crate::v2::inventory::Inventory;
 use crate::v2::store::Store;
 
 #[derive(Component)]
@@ -126,12 +127,12 @@ pub(crate) fn add_selected_unit_info_panel(parent: &mut ChildBuilder, font: Hand
 
 fn update_info_panel_system(
     mut info_box_query: Query<&mut Text, With<SelectedEntityInfoPanel>>,
-    selected_entity_query: Query<(&Selectable, &Name, &Children)>,
+    selected_entity_query: Query<(&Selectable, &Name, &Children, Option<&Inventory>)>,
     mut store_lookup: Query<(&mut Store)>,
 ) {
-    if let Some((_selectable, name, children)) = selected_entity_query
+    if let Some((_selectable, name, children, maybe_inventory)) = selected_entity_query
         .iter()
-        .find(|(selectable, name, _)| selectable.selected)
+        .find(|(selectable, name, _, _)| selectable.selected)
     {
         if let Some(mut text) = info_box_query.iter_mut().next() {
             let text = text.sections.get_mut(0).unwrap();
@@ -145,6 +146,10 @@ fn update_info_panel_system(
                         store.inventory.get(&Commodity::Food)
                     ));
                 }
+            }
+            if let Some(inventory) = maybe_inventory {
+                text.value
+                    .push_str(&format!("\nFood: {}", inventory.get(&Commodity::Food)));
             }
         }
     } else {
