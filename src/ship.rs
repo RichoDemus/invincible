@@ -94,19 +94,16 @@ fn ship_decision_system(
             continue;
         }
 
-        let (seller, seller_planet, sell_price, seller_planet_name): (Entity, &Planet, u64, &Name) =
-            stores
-                .iter()
-                .filter_map(|(entity, parent, store, name)| {
-                    store
-                        .price_check_buy_from_store(&food)
-                        .map(|credits| (entity, parent, credits, name))
-                })
-                .min_by_key(|(_, _, price, _)| *price)
-                .expect("Should be a store to buy from");
-
-        let (buyer, buyer_planet, buy_price, buyer_planet_name): (Entity, &Planet, u64, &Name) =
-            stores
+        if let Some((seller, _seller_planet, sell_price, seller_planet_name)) = stores
+            .iter()
+            .filter_map(|(entity, parent, store, name)| {
+                store
+                    .price_check_buy_from_store(&food)
+                    .map(|credits| (entity, parent, credits, name))
+            })
+            .min_by_key(|(_, _, price, _)| *price)
+        {
+            if let Some((buyer, buyer_planet, buy_price, buyer_planet_name)) = stores
                 .iter()
                 .filter_map(|(entity, parent, store, name)| {
                     store
@@ -114,24 +111,24 @@ fn ship_decision_system(
                         .map(|credits| (entity, parent, credits, name))
                 })
                 .max_by_key(|(_, _, price, _)| *price)
-                .expect("Should be a store to sell to");
-        debug_assert_ne!(seller, buyer);
+            {
+                action_queue.queue.push(ShipAction::Buy {
+                    planet_to_buy_at: seller,
+                    store: seller,
+                    commodity: food,
+                });
+                action_queue.queue.push(ShipAction::Sell {
+                    planet_to_sell_at: buyer,
+                    store: buyer,
+                    commodity: food,
+                });
 
-        action_queue.queue.push(ShipAction::Buy {
-            planet_to_buy_at: seller,
-            store: seller,
-            commodity: food,
-        });
-        action_queue.queue.push(ShipAction::Sell {
-            planet_to_sell_at: buyer,
-            store: buyer,
-            commodity: food,
-        });
-
-        info!(
-            "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
-            food, seller_planet_name, sell_price, buyer_planet_name, buy_price
-        );
+                info!(
+                    "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
+                    food, seller_planet_name, sell_price, buyer_planet_name, buy_price
+                );
+            }
+        }
     }
 }
 

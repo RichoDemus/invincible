@@ -107,6 +107,9 @@ impl Store {
 
     pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits> {
         debug_assert_eq!(commodity, &Commodity::Food);
+        if self.inventory.get(commodity) > 100 {
+            return None;
+        }
         if self.magically_produces_food {
             Some(1)
         } else {
