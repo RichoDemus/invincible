@@ -35,8 +35,8 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
             Color::LIME_GREEN,
             10.,
         ),
-        // ("Hydro", false, Vec2::new(100.,-100.), Color::PINK, 30.),
-        // ("Forge", false, Vec2::new(-100.,100.), Color::GRAY, 15.),
+        ("Hydro", false, Vec2::new(100., -100.), Color::PINK, 30.),
+        ("Forge", false, Vec2::new(-100., 100.), Color::GRAY, 15.),
     ];
     for (name, magical_food, position, color, radius) in planets {
         let shape = shapes::Circle {
