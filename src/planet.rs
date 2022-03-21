@@ -117,7 +117,7 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
                             horizontal: HorizontalAlign::Center,
                         },
                     ),
-                    transform: Transform::from_xyz(0., -25., 0.),
+                    transform: Transform::from_xyz(0., -radius + -10., 0.),
                     ..Default::default()
                 });
             });

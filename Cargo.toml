@@ -17,3 +17,5 @@ uuid = { version = "0.8", features = ["v4"] }
 log = "0.4.11"
 dashmap = "5.2.0"
 console_error_panic_hook = "0.1.6"
+strum = "0.24"
+strum_macros = "0.24"

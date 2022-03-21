@@ -2,6 +2,7 @@ use std::ops::Not;
 
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
+use strum::IntoEnumIterator;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
@@ -98,10 +99,10 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
 }
 
 fn ship_decision_system(
-    mut action_queues: Query<&mut ActionQueue>,
+    mut action_queues: Query<(&mut ActionQueue, &Name)>,
     stores: Query<(Entity, &Planet, &Store, &Name)>,
 ) {
-    for mut action_queue in action_queues.iter_mut() {
+    for (mut action_queue, name) in action_queues.iter_mut() {
         if action_queue.queue.is_empty().not() {
             continue;
         }
@@ -141,13 +142,16 @@ fn ship_decision_system(
             });
 
             info!(
-                "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
+                "[{}]: New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
+                name.0,
                 trade_route.commodity,
                 trade_route.store_to_buy_from_name,
                 trade_route.cost_to_buy_commodity,
                 trade_route.store_to_sell_to_name,
                 trade_route.price_to_sell_commodity
             );
+        } else {
+            info!("No profitable trade possible");
         }
     }
 }
@@ -239,12 +243,14 @@ fn trade_with_planet(
                 let mut store = stores
                     .get_component_mut::<Store>(*store)
                     .expect("Should be a store here");
+                // todo maybe buy should handle this
+                let amount_available = store.inventory.get(&commodity);
                 let receipt = store
-                    .buy_from_store(*commodity, amount_wanted, None)
+                    .buy_from_store(*commodity, amount_wanted.min(amount_available), None)
                     .expect("should've managed a buy");
                 action_queue.queue.remove(0);
                 inventory.add(receipt.commodity, receipt.amount);
-                info!("Bought {:?} for {}", receipt.commodity, receipt.price);
+                debug!("Bought {:?} for {}", receipt.commodity, receipt.price);
             }
             ShipAction::Sell {
                 store, commodity, ..
@@ -256,7 +262,7 @@ fn trade_with_planet(
                 if let Some(receipt) = store.sell_to_store(*commodity, amount_to_sell, None) {
                     action_queue.queue.remove(0);
                     inventory.take(&receipt.commodity, receipt.amount);
-                    info!("Sold {:?} for {}", receipt.commodity, receipt.price);
+                    debug!("Sold {:?} for {}", receipt.commodity, receipt.price);
                 } else {
                     info!("Failed to sell {:?}, jettisoning it into space", commodity);
                     inventory.discard(*commodity);
@@ -287,6 +293,7 @@ fn decide_trade_route(
             listings
                 .into_iter()
                 .map(|listing| (entity, planet, name, listing))
+                .filter(|(_, _, _, listing)| listing.amount > 40) // todo make smarter
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
@@ -301,7 +308,7 @@ fn decide_trade_route(
         .collect::<Vec<_>>();
     // info!("Buy from store listings: {:#?}", buy_listings);
     // info!("Sell to store listings: {:#?}", sell_listings);
-    let trade_routes = vec![Food, HydrogenTanks, Fuel]
+    let trade_routes = Commodity::iter()
         .into_iter()
         .flat_map(|commodity| {
             let cheapest_buy = buy_listings

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use itertools::Itertools;
+use strum::IntoEnumIterator;
 use uuid::Uuid;
 
 use crate::v2::commodity::Commodity;
@@ -21,6 +22,7 @@ pub struct Receipt {
 #[derive(Debug)]
 pub struct StoreListing {
     pub commodity: Commodity,
+    pub amount: Amount,
     pub price: Credits,
 }
 
@@ -114,19 +116,25 @@ impl Store {
         commodity: Commodity,
     ) -> Option<StoreListing> {
         let amount_stockpiled = self.inventory.get(&commodity);
+        let max_sellable = amount_stockpiled.max(20);
         if amount_stockpiled > 200 {
             Some(StoreListing {
                 commodity,
+                amount: max_sellable,
                 price: 1,
             })
         } else if amount_stockpiled > 100 {
             Some(StoreListing {
                 commodity,
+                amount: max_sellable,
                 price: 2,
             })
+        } else if amount_stockpiled < 30 {
+            None
         } else {
             Some(StoreListing {
                 commodity,
+                amount: max_sellable,
                 price: 5,
             })
         }
@@ -134,21 +142,24 @@ impl Store {
 
     pub fn price_check_sell_specific_to_store(&self, commodity: Commodity) -> Option<StoreListing> {
         let amount_stockpiled = self.inventory.get(&commodity);
-        if commodity == Food && amount_stockpiled < 20 {
+        if amount_stockpiled < 20 {
             Some(StoreListing {
                 commodity,
+                amount: 400, // todo make smarter
                 price: 10,
             })
-        } else if commodity == HydrogenTanks && amount_stockpiled > 100 {
+        } else if amount_stockpiled > 200 {
             None
         } else if amount_stockpiled > 100 {
             Some(StoreListing {
                 commodity,
+                amount: 400, // todo make smarter
                 price: 1,
             })
         } else {
             Some(StoreListing {
                 commodity,
+                amount: 400, // todo make smarter
                 price: 3,
             })
         }
@@ -156,14 +167,14 @@ impl Store {
 
     // todo list same commodity multiple times for different prices based on inventory
     pub fn price_check_buy_from_store(&self) -> Vec<StoreListing> {
-        vec![Food, HydrogenTanks, Fuel]
+        Commodity::iter()
             .into_iter()
             .filter_map(|commodity| self.price_check_buy_specific_from_store(commodity))
             .collect()
     }
 
     pub fn price_check_sell_to_store(&self) -> Vec<StoreListing> {
-        vec![Food, HydrogenTanks, Fuel]
+        Commodity::iter()
             .into_iter()
             .filter_map(|commodity| self.price_check_sell_specific_to_store(commodity))
             .collect()

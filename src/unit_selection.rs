@@ -1,5 +1,6 @@
 use bevy::ecs::query::QueryEntityError;
 use bevy::prelude::*;
+use strum::IntoEnumIterator;
 
 use crate::asset_loading::Sprites;
 use crate::camera::{get_camera_position_in_world_coordinates, MainCamera};
@@ -129,7 +130,7 @@ fn update_info_panel_system(
     mut info_box_query: Query<&mut Text, With<SelectedEntityInfoPanel>>,
     selected_entity_query: Query<(&Selectable, &Name, Option<&Store>, Option<&Inventory>)>,
 ) {
-    if let Some((_selectable, name, maybe_market, maybe_inventory)) = selected_entity_query
+    if let Some((_selectable, name, maybe_store, maybe_inventory)) = selected_entity_query
         .iter()
         .find(|(selectable, name, _, _)| selectable.selected)
     {
@@ -137,19 +138,35 @@ fn update_info_panel_system(
             let text = text.sections.get_mut(0).unwrap();
             text.value = format!("Selected {}", name);
 
-            if let Some(market) = maybe_market {
-                text.value.push_str(&format!(
-                    "\nFood: {}",
-                    market.inventory.get(&Commodity::Food)
-                ));
-                text.value.push_str(&format!(
-                    "\nHydrogen: {}",
-                    market.inventory.get(&Commodity::HydrogenTanks)
-                ));
-                text.value.push_str(&format!(
-                    "\nFuel: {}",
-                    market.inventory.get(&Commodity::Fuel)
-                ));
+            if let Some(store) = maybe_store {
+                text.value.push_str("\nX Name B/S");
+                for commodity in Commodity::iter() {
+                    let amount = store.inventory.get(&commodity);
+                    let buy_price = store
+                        .price_check_buy_specific_from_store(commodity)
+                        .map(|l| l.price)
+                        .unwrap_or(0);
+                    let sell_price = store
+                        .price_check_sell_specific_to_store(commodity)
+                        .map(|l| l.price)
+                        .unwrap_or(0);
+                    text.value.push_str(&format!(
+                        "\n{} {} {}/{}",
+                        amount, commodity, buy_price, sell_price,
+                    ));
+                }
+                // text.value.push_str(&format!(
+                //     "\nFood: {}",
+                //     store.inventory.get(&Commodity::Food)
+                // ));
+                // text.value.push_str(&format!(
+                //     "\nHydrogen: {}",
+                //     store.inventory.get(&Commodity::HydrogenTanks)
+                // ));
+                // text.value.push_str(&format!(
+                //     "\nFuel: {}",
+                //     store.inventory.get(&Commodity::Fuel)
+                // ));
             }
             if let Some(inventory) = maybe_inventory {
                 text.value
