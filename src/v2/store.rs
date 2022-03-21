@@ -20,7 +20,6 @@ pub struct Receipt {
 pub struct Store {
     pub id: Uuid,
     pub inventory: Inventory,
-    pub magically_produces_food: bool,
 }
 
 impl Default for Store {
@@ -28,7 +27,6 @@ impl Default for Store {
         let mut store = Self {
             id: Uuid::new_v4(),
             inventory: Inventory::default(),
-            magically_produces_food: false,
         };
         store.give(Commodity::Food, 100);
         store
@@ -51,11 +49,14 @@ impl Store {
         price: Option<Credits>,
     ) -> Option<Receipt> {
         if self.inventory.get(&commodity) < amount {
-            // Not enough of that commodity
+            info!("Not enough {:?}", commodity);
             return None;
         }
         match self.price_check_buy_from_store(&commodity) {
-            None => None,
+            None => {
+                info!("Store doesn't sell {:?}", commodity);
+                None
+            }
 
             Some(store_price) => {
                 if price.is_none() || price.unwrap() == store_price {
@@ -66,6 +67,7 @@ impl Store {
                         price: store_price,
                     })
                 } else {
+                    info!("Store doesn't sell {:?} for that price", commodity);
                     None
                 }
             }
@@ -97,8 +99,7 @@ impl Store {
     }
 
     pub fn price_check_buy_from_store(&self, commodity: &Commodity) -> Option<Credits> {
-        debug_assert_eq!(commodity, &Commodity::Food);
-        if self.magically_produces_food {
+        if self.inventory.get(commodity) > 100 {
             Some(2)
         } else {
             Some(5)
@@ -106,11 +107,7 @@ impl Store {
     }
 
     pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits> {
-        debug_assert_eq!(commodity, &Commodity::Food);
         if self.inventory.get(commodity) > 100 {
-            return None;
-        }
-        if self.magically_produces_food {
             Some(1)
         } else {
             Some(3)

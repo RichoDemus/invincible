@@ -3,6 +3,7 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
+use crate::planet::NaturalResource::{FertileSoil, Hydrogen};
 use crate::unit_selection::Selectable;
 use crate::util::OncePerSecond;
 use crate::v2::commodity::Commodity;
@@ -15,30 +16,43 @@ impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(planet_setup);
         app.add_system(population_buys_food);
-        app.add_system(water_planet_produces_food);
+        app.add_system(produce_commodities_from_natural_resources);
     }
 }
 
 #[derive(Component)]
 pub struct Planet;
 
+// todo should these be separate structs instead?
 #[derive(Component)]
-pub struct Water;
+pub struct PlanetaryResources {
+    resources: Vec<NaturalResource>,
+}
+pub enum NaturalResource {
+    FertileSoil,
+    Hydrogen,
+}
 
 fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
     let planets = vec![
-        ("Terra", false, Vec2::new(100., 100.), Color::CYAN, 20.),
+        ("Terra", Vec2::new(100., 100.), Color::CYAN, 20., vec![]),
         (
             "Agri",
-            true,
             Vec2::new(-100., -100.),
             Color::LIME_GREEN,
             10.,
+            vec![FertileSoil],
         ),
-        ("Hydro", false, Vec2::new(100., -100.), Color::PINK, 30.),
-        ("Forge", false, Vec2::new(-100., 100.), Color::GRAY, 15.),
+        (
+            "Hydro",
+            Vec2::new(100., -100.),
+            Color::PINK,
+            30.,
+            vec![Hydrogen],
+        ),
+        ("Forge", Vec2::new(-100., 100.), Color::GRAY, 15., vec![]),
     ];
-    for (name, magical_food, position, color, radius) in planets {
+    for (name, position, color, radius, natural_resources) in planets {
         let shape = shapes::Circle {
             radius,
             center: Vec2::default(),
@@ -52,18 +66,15 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
             },
             Transform::default(),
         ));
-        if magical_food {
-            planet.insert(Water);
-        }
         planet
             .insert(Planet)
             .insert(Transform::from_translation(position.extend(0.)))
             .insert(Name(name.to_string()))
             .insert(Selectable::default())
-            .insert(Store {
-                magically_produces_food: magical_food,
-                ..Store::default()
+            .insert(PlanetaryResources {
+                resources: natural_resources,
             })
+            .insert(Store::default())
             .with_children(|parent| {
                 parent.spawn().insert_bundle(Text2dBundle {
                     text: Text::with_section(
@@ -109,14 +120,23 @@ fn population_buys_food(
     }
 }
 
-fn water_planet_produces_food(
+fn produce_commodities_from_natural_resources(
     time: Res<Time>,
     mut once_per_second: Local<OncePerSecond>,
-    mut stores: Query<(&mut Store), With<Water>>,
+    mut stores: Query<(&mut Store, &PlanetaryResources)>,
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
-        for mut store in stores.iter_mut() {
-            store.give(Commodity::Food, 10);
+        for (mut store, natural_resources) in stores.iter_mut() {
+            for resource in &natural_resources.resources {
+                match resource {
+                    FertileSoil => {
+                        store.give(Commodity::Food, 10);
+                    }
+                    Hydrogen => {
+                        store.give(Commodity::Hydrogen, 20);
+                    }
+                }
+            }
         }
     }
 }
@@ -129,7 +149,7 @@ mod tests {
     fn test_produce_food() {
         let mut world = World::default();
         let mut update_stage = SystemStage::parallel();
-        update_stage.add_system(water_planet_produces_food);
+        update_stage.add_system(produce_commodities_from_natural_resources);
 
         let time = Time::default();
         // mock time? :S

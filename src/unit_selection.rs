@@ -143,10 +143,18 @@ fn update_info_panel_system(
                     "\nFood: {}",
                     market.inventory.get(&Commodity::Food)
                 ));
+                text.value.push_str(&format!(
+                    "\nHydrogen: {}",
+                    market.inventory.get(&Commodity::Hydrogen)
+                ));
             }
             if let Some(inventory) = maybe_inventory {
                 text.value
                     .push_str(&format!("\nFood: {}", inventory.get(&Commodity::Food)));
+                text.value.push_str(&format!(
+                    "\nHydrogen: {}",
+                    inventory.get(&Commodity::Hydrogen)
+                ));
             }
         }
     } else {
