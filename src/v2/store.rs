@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use itertools::Itertools;
 use uuid::Uuid;
 
 use crate::v2::commodity::Commodity;
+use crate::v2::commodity::Commodity::{Food, Fuel, HydrogenTanks};
 use crate::v2::inventory::Amount;
 use crate::v2::inventory::Inventory;
 
@@ -13,6 +15,12 @@ pub type Credits = u64;
 pub struct Receipt {
     pub commodity: Commodity,
     pub amount: Amount,
+    pub price: Credits,
+}
+
+#[derive(Debug)]
+pub struct StoreListing {
+    pub commodity: Commodity,
     pub price: Credits,
 }
 
@@ -52,19 +60,19 @@ impl Store {
             info!("Not enough {:?}", commodity);
             return None;
         }
-        match self.price_check_buy_from_store(&commodity) {
+        match self.price_check_buy_specific_from_store(commodity) {
             None => {
                 info!("Store doesn't sell {:?}", commodity);
                 None
             }
 
             Some(store_price) => {
-                if price.is_none() || price.unwrap() == store_price {
+                if price.is_none() || price.unwrap() == store_price.price {
                     self.take(&commodity, amount);
                     Some(Receipt {
                         commodity,
                         amount,
-                        price: store_price,
+                        price: store_price.price,
                     })
                 } else {
                     info!("Store doesn't sell {:?} for that price", commodity);
@@ -80,16 +88,19 @@ impl Store {
         amount: Amount,
         price: Option<Credits>,
     ) -> Option<Receipt> {
-        match self.price_check_sell_to_store(&commodity) {
-            None => None,
+        match self.price_check_sell_specific_to_store(commodity) {
+            None => {
+                info!("Store doesn't want to buy {:?}", commodity);
+                None
+            }
 
             Some(store_price) => {
-                if price.is_none() || price.unwrap() == store_price {
+                if price.is_none() || price.unwrap() == store_price.price {
                     self.give(commodity, amount);
                     Some(Receipt {
                         commodity,
                         amount,
-                        price: store_price,
+                        price: store_price.price,
                     })
                 } else {
                     None
@@ -98,20 +109,64 @@ impl Store {
         }
     }
 
-    pub fn price_check_buy_from_store(&self, commodity: &Commodity) -> Option<Credits> {
-        if self.inventory.get(commodity) > 100 {
-            Some(2)
+    pub fn price_check_buy_specific_from_store(
+        &self,
+        commodity: Commodity,
+    ) -> Option<StoreListing> {
+        let amount_stockpiled = self.inventory.get(&commodity);
+        if amount_stockpiled > 200 {
+            Some(StoreListing {
+                commodity,
+                price: 1,
+            })
+        } else if amount_stockpiled > 100 {
+            Some(StoreListing {
+                commodity,
+                price: 2,
+            })
         } else {
-            Some(5)
+            Some(StoreListing {
+                commodity,
+                price: 5,
+            })
         }
     }
 
-    pub fn price_check_sell_to_store(&self, commodity: &Commodity) -> Option<Credits> {
-        if self.inventory.get(commodity) > 100 {
-            Some(1)
+    pub fn price_check_sell_specific_to_store(&self, commodity: Commodity) -> Option<StoreListing> {
+        let amount_stockpiled = self.inventory.get(&commodity);
+        if commodity == Food && amount_stockpiled < 20 {
+            Some(StoreListing {
+                commodity,
+                price: 10,
+            })
+        } else if commodity == HydrogenTanks && amount_stockpiled > 100 {
+            None
+        } else if amount_stockpiled > 100 {
+            Some(StoreListing {
+                commodity,
+                price: 1,
+            })
         } else {
-            Some(3)
+            Some(StoreListing {
+                commodity,
+                price: 3,
+            })
         }
+    }
+
+    // todo list same commodity multiple times for different prices based on inventory
+    pub fn price_check_buy_from_store(&self) -> Vec<StoreListing> {
+        vec![Food, HydrogenTanks, Fuel]
+            .into_iter()
+            .filter_map(|commodity| self.price_check_buy_specific_from_store(commodity))
+            .collect()
+    }
+
+    pub fn price_check_sell_to_store(&self) -> Vec<StoreListing> {
+        vec![Food, HydrogenTanks, Fuel]
+            .into_iter()
+            .filter_map(|commodity| self.price_check_sell_specific_to_store(commodity))
+            .collect()
     }
 
     fn list(&self) -> &HashMap<Commodity, Amount> {
@@ -153,7 +208,7 @@ mod tests {
         store.give(Commodity::Food, 100);
 
         let buy_price = store
-            .price_check_buy_from_store(&Commodity::Food)
+            .price_check_buy_specific_from_store(&Commodity::Food)
             .expect("Should be able to buy food");
         assert!(buy_price > 0);
 
@@ -176,7 +231,7 @@ mod tests {
         store.give(Commodity::Food, 100);
 
         let sell_price = store
-            .price_check_sell_to_store(&Commodity::Food)
+            .price_check_sell_specific_to_store(&Commodity::Food)
             .expect("Should be able to sell food");
         assert!(sell_price > 0);
 

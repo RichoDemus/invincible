@@ -4,11 +4,11 @@ use bevy_prototype_lyon::prelude::*;
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
 use crate::pause::AppState;
-use crate::planet::NaturalResource::{FertileSoil, Hydrogen};
+use crate::planet::NaturalResource::{FertileSoil, HydrogenGasVents};
 use crate::unit_selection::Selectable;
 use crate::util::OncePerSecond;
 use crate::v2::commodity::Commodity;
-use crate::v2::market::Market;
+use crate::v2::commodity::Commodity::{Fuel, HydrogenTanks};
 use crate::v2::store::{Credits, Store};
 
 pub struct PlanetPlugin;
@@ -19,12 +19,13 @@ impl Plugin for PlanetPlugin {
         app.add_system_set(
             SystemSet::on_update(AppState::GameRunning)
                 .with_system(population_buys_food)
-                .with_system(produce_commodities_from_natural_resources),
+                .with_system(produce_commodities_from_natural_resources)
+                .with_system(hydrogen_refinery_produces_fuel),
         );
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Planet;
 
 // todo should these be separate structs instead?
@@ -32,31 +33,51 @@ pub struct Planet;
 pub struct PlanetaryResources {
     resources: Vec<NaturalResource>,
 }
+
 pub enum NaturalResource {
     FertileSoil,
-    Hydrogen,
+    HydrogenGasVents,
 }
+
+#[derive(Component)]
+struct HydrogenRefinery;
 
 fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
     let planets = vec![
-        ("Terra", Vec2::new(100., 100.), Color::CYAN, 20., vec![]),
+        (
+            "Terra",
+            Vec2::new(100., 100.),
+            Color::CYAN,
+            20.,
+            vec![],
+            false,
+        ),
         (
             "Agri",
             Vec2::new(-100., -100.),
             Color::LIME_GREEN,
             10.,
             vec![FertileSoil],
+            false,
         ),
         (
             "Hydro",
             Vec2::new(100., -100.),
             Color::PINK,
             30.,
-            vec![Hydrogen],
+            vec![HydrogenGasVents],
+            false,
         ),
-        ("Forge", Vec2::new(-100., 100.), Color::GRAY, 15., vec![]),
+        (
+            "Forge",
+            Vec2::new(-100., 100.),
+            Color::GRAY,
+            15.,
+            vec![],
+            true,
+        ),
     ];
-    for (name, position, color, radius, natural_resources) in planets {
+    for (name, position, color, radius, natural_resources, hydrogen_refinery) in planets {
         let shape = shapes::Circle {
             radius,
             center: Vec2::default(),
@@ -70,6 +91,9 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
             },
             Transform::default(),
         ));
+        if hydrogen_refinery {
+            planet.insert(HydrogenRefinery);
+        }
         planet
             .insert(Planet)
             .insert(Transform::from_translation(position.extend(0.)))
@@ -108,16 +132,17 @@ fn population_buys_food(
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
         for mut store in stores.iter_mut() {
-            match store.price_check_buy_from_store(&Commodity::Food) {
-                Some(price) if price < 6 => {
+            match store.price_check_buy_specific_from_store(Commodity::Food) {
+                Some(price) if price.price < 6 => {
                     // affordable food
                     let receipt = store
-                        .buy_from_store(Commodity::Food, 1, Some(price))
+                        .buy_from_store(Commodity::Food, 1, Some(price.price))
                         .expect("We just checked, this should work");
-                    info!("People bought food: {:?}", receipt);
+                    debug!("People bought food: {:?}", receipt);
                 }
                 _ => {
                     // no affordable food :o
+                    todo!("No affordable food");
                 }
             }
         }
@@ -136,10 +161,25 @@ fn produce_commodities_from_natural_resources(
                     FertileSoil => {
                         store.give(Commodity::Food, 10);
                     }
-                    Hydrogen => {
-                        store.give(Commodity::Hydrogen, 20);
+                    HydrogenGasVents => {
+                        store.give(Commodity::HydrogenTanks, 20);
                     }
                 }
+            }
+        }
+    }
+}
+
+fn hydrogen_refinery_produces_fuel(
+    time: Res<Time>,
+    mut once_per_second: Local<OncePerSecond>,
+    mut stores: Query<(&mut Store), With<HydrogenRefinery>>,
+) {
+    if once_per_second.timer.tick(time.delta()).just_finished() {
+        for mut store in stores.iter_mut() {
+            if store.inventory.get(&HydrogenTanks) > 0 {
+                store.take(&HydrogenTanks, 1);
+                store.give(Fuel, 1);
             }
         }
     }

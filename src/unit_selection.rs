@@ -6,7 +6,6 @@ use crate::camera::{get_camera_position_in_world_coordinates, MainCamera};
 use crate::common_components::Name;
 use crate::v2::commodity::Commodity;
 use crate::v2::inventory::Inventory;
-use crate::v2::market::Market;
 use crate::v2::store::Store;
 
 #[derive(Component)]
@@ -145,7 +144,11 @@ fn update_info_panel_system(
                 ));
                 text.value.push_str(&format!(
                     "\nHydrogen: {}",
-                    market.inventory.get(&Commodity::Hydrogen)
+                    market.inventory.get(&Commodity::HydrogenTanks)
+                ));
+                text.value.push_str(&format!(
+                    "\nFuel: {}",
+                    market.inventory.get(&Commodity::Fuel)
                 ));
             }
             if let Some(inventory) = maybe_inventory {
@@ -153,8 +156,10 @@ fn update_info_panel_system(
                     .push_str(&format!("\nFood: {}", inventory.get(&Commodity::Food)));
                 text.value.push_str(&format!(
                     "\nHydrogen: {}",
-                    inventory.get(&Commodity::Hydrogen)
+                    inventory.get(&Commodity::HydrogenTanks)
                 ));
+                text.value
+                    .push_str(&format!("\nFuel: {}", inventory.get(&Commodity::Fuel)));
             }
         }
     } else {

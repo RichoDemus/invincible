@@ -62,6 +62,10 @@ impl Inventory {
         *self.items.get(commodity).unwrap_or(&0)
     }
 
+    pub fn discard(&mut self, commodity: Commodity) {
+        *self.items.entry(commodity).or_insert(0) = 0;
+    }
+
     pub fn space_left(&self) -> Amount {
         let size: Amount = self.items.values().sum();
         self.capacity - size

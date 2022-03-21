@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-
 use uuid::Uuid;
 
 use crate::v2::commodity::Commodity;
@@ -27,7 +26,7 @@ impl Market {
             .iter()
             .filter_map(|store| {
                 store
-                    .price_check_buy_from_store(&commodity)
+                    .price_check_buy_specific_from_store(commodity)
                     .map(|price| CommodityListing {
                         store: store.id,
                         commodity,
@@ -42,7 +41,7 @@ impl Market {
             .iter()
             .filter_map(|store| {
                 store
-                    .price_check_sell_to_store(&commodity)
+                    .price_check_sell_specific_to_store(&commodity)
                     .map(|price| CommodityListing {
                         store: store.id,
                         commodity,

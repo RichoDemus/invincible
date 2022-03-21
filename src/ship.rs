@@ -6,12 +6,13 @@ use bevy_prototype_lyon::prelude::*;
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
 use crate::pause::AppState;
+use crate::planet::NaturalResource::HydrogenGasVents;
 use crate::planet::Planet;
 use crate::unit_selection::Selectable;
 use crate::v2::commodity::Commodity;
-use crate::v2::inventory::Inventory;
-use crate::v2::market::Market;
-use crate::v2::store::Store;
+use crate::v2::commodity::Commodity::{Food, Fuel, HydrogenTanks};
+use crate::v2::inventory::{Amount, Inventory};
+use crate::v2::store::{Store, StoreListing};
 
 pub struct ShipPlugin;
 
@@ -35,6 +36,11 @@ struct ActionQueue {
     queue: Vec<ShipAction>,
 }
 
+#[derive(Component)]
+struct Engine {
+    speed: f32,
+}
+
 #[derive(Debug)]
 enum ShipAction {
     Buy {
@@ -50,98 +56,108 @@ enum ShipAction {
 }
 
 fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
-    commands
-        .spawn_bundle(GeometryBuilder::build_as(
-            &shapes::Circle {
-                // todo, triangle instead of circle
-                radius: 5.,
-                center: Vec2::default(),
-            },
-            DrawMode::Outlined {
-                fill_mode: FillMode::color(Color::GOLD),
-                outline_mode: StrokeMode::new(Color::WHITE, 1.0),
-            },
-            Transform::default(),
-        ))
-        .insert(Ship)
-        .insert(ActionQueue::default())
-        .insert(Selectable::default())
-        .insert(Name("Wayfarer".to_string()))
-        .insert(Inventory::with_capacity(5))
-        .with_children(|parent| {
-            parent.spawn().insert_bundle(Text2dBundle {
-                text: Text::with_section(
-                    "Ship",
-                    TextStyle {
-                        font: fonts.font.clone(),
-                        font_size: 20.0,
-                        color: Color::WHITE,
-                    },
-                    TextAlignment {
-                        vertical: VerticalAlign::Center,
-                        horizontal: HorizontalAlign::Center,
-                    },
-                ),
-                transform: Transform::from_xyz(0., -15., 0.),
-                ..Default::default()
+    for (ship_name, speed, capacity) in vec![("Wayfarer", 300., 5), ("Envoy", 100., 20)] {
+        commands
+            .spawn_bundle(GeometryBuilder::build_as(
+                &shapes::Circle {
+                    // todo, triangle instead of circle
+                    radius: 5.,
+                    center: Vec2::default(),
+                },
+                DrawMode::Outlined {
+                    fill_mode: FillMode::color(Color::GOLD),
+                    outline_mode: StrokeMode::new(Color::WHITE, 1.0),
+                },
+                Transform::default(),
+            ))
+            .insert(Ship)
+            .insert(ActionQueue::default())
+            .insert(Selectable::default())
+            .insert(Engine { speed })
+            .insert(Name(ship_name.to_string()))
+            .insert(Inventory::with_capacity(capacity))
+            .with_children(|parent| {
+                parent.spawn().insert_bundle(Text2dBundle {
+                    text: Text::with_section(
+                        ship_name,
+                        TextStyle {
+                            font: fonts.font.clone(),
+                            font_size: 20.0,
+                            color: Color::WHITE,
+                        },
+                        TextAlignment {
+                            vertical: VerticalAlign::Center,
+                            horizontal: HorizontalAlign::Center,
+                        },
+                    ),
+                    transform: Transform::from_xyz(0., -15., 0.),
+                    ..Default::default()
+                });
             });
-        });
+    }
 }
 
 fn ship_decision_system(
     mut action_queues: Query<&mut ActionQueue>,
     stores: Query<(Entity, &Planet, &Store, &Name)>,
 ) {
-    let food = Commodity::Food;
     for mut action_queue in action_queues.iter_mut() {
         if action_queue.queue.is_empty().not() {
             continue;
         }
 
-        if let Some((seller, _seller_planet, sell_price, seller_planet_name)) = stores
+        let buy_from_stores_listings = stores
             .iter()
-            .filter_map(|(entity, parent, store, name)| {
-                store
-                    .price_check_buy_from_store(&food)
-                    .map(|credits| (entity, parent, credits, name))
-            })
-            .min_by_key(|(_, _, price, _)| *price)
-        {
-            if let Some((buyer, buyer_planet, buy_price, buyer_planet_name)) = stores
-                .iter()
-                .filter_map(|(entity, parent, store, name)| {
-                    store
-                        .price_check_sell_to_store(&food)
-                        .map(|credits| (entity, parent, credits, name))
-                })
-                .max_by_key(|(_, _, price, _)| *price)
-            {
-                action_queue.queue.push(ShipAction::Buy {
-                    planet_to_buy_at: seller,
-                    store: seller,
-                    commodity: food,
-                });
-                action_queue.queue.push(ShipAction::Sell {
-                    planet_to_sell_at: buyer,
-                    store: buyer,
-                    commodity: food,
-                });
+            .map(
+                |(entity, planet, store, name): (Entity, &Planet, &Store, &Name)| {
+                    let listings = store.price_check_buy_from_store();
+                    (entity, planet, name, listings)
+                },
+            )
+            .collect::<Vec<_>>();
 
-                info!(
-                    "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
-                    food, seller_planet_name, sell_price, buyer_planet_name, buy_price
-                );
-            }
+        let sell_to_stores_listings = stores
+            .iter()
+            .map(
+                |(entity, planet, store, name): (Entity, &Planet, &Store, &Name)| {
+                    let listings = store.price_check_sell_to_store();
+                    (entity, planet, name, listings)
+                },
+            )
+            .collect::<Vec<_>>();
+
+        if let Some(trade_route) =
+            decide_trade_route(buy_from_stores_listings, sell_to_stores_listings)
+        {
+            action_queue.queue.push(ShipAction::Buy {
+                planet_to_buy_at: trade_route.store_to_buy_from,
+                store: trade_route.store_to_buy_from,
+                commodity: trade_route.commodity,
+            });
+            action_queue.queue.push(ShipAction::Sell {
+                planet_to_sell_at: trade_route.store_to_sell_to,
+                store: trade_route.store_to_sell_to,
+                commodity: trade_route.commodity,
+            });
+
+            info!(
+                "New trade, buy {:?} at {:?} for {}, sell att {:?} for {}",
+                trade_route.commodity,
+                trade_route.store_to_buy_from_name,
+                trade_route.cost_to_buy_commodity,
+                trade_route.store_to_sell_to_name,
+                trade_route.price_to_sell_commodity
+            );
         }
     }
 }
 
 fn move_ship_towards_objective(
-    mut ships: Query<(&mut Transform, &mut ActionQueue), With<Ship>>,
+    mut ships: Query<(&mut Transform, &mut ActionQueue, &Engine), With<Ship>>,
     planets: Query<(Entity, &Transform), Without<Ship>>,
     time: Res<Time>,
 ) {
-    for (mut ship_transform, mut action_queue) in ships.iter_mut() {
+    for (mut ship_transform, mut action_queue, engine) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
             continue;
         }
@@ -175,7 +191,7 @@ fn move_ship_towards_objective(
         let diff = destination_transform.translation - ship_transform.translation;
         let diff = diff.normalize();
 
-        ship_transform.translation += diff * time.delta_seconds() * 300.;
+        ship_transform.translation += diff * time.delta_seconds() * engine.speed;
     }
 }
 
@@ -184,7 +200,6 @@ fn trade_with_planet(
     planets: Query<(Entity, &Transform), Without<Ship>>,
     mut stores: Query<(Entity, &mut Store), Without<Ship>>,
 ) {
-    let food = Commodity::Food;
     for (mut ship_transform, mut action_queue, mut inventory) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
             continue;
@@ -225,7 +240,7 @@ fn trade_with_planet(
                     .get_component_mut::<Store>(*store)
                     .expect("Should be a store here");
                 let receipt = store
-                    .buy_from_store(food, amount_wanted, None)
+                    .buy_from_store(*commodity, amount_wanted, None)
                     .expect("should've managed a buy");
                 action_queue.queue.remove(0);
                 inventory.add(receipt.commodity, receipt.amount);
@@ -234,17 +249,88 @@ fn trade_with_planet(
             ShipAction::Sell {
                 store, commodity, ..
             } => {
-                let amount_to_sell = inventory.get(&food);
+                let amount_to_sell = inventory.get(commodity);
                 let mut store = stores
                     .get_component_mut::<Store>(*store)
                     .expect("Should be a store here");
-                let receipt = store
-                    .sell_to_store(food, amount_to_sell, None)
-                    .expect("should've managed a sell");
-                action_queue.queue.remove(0);
-                inventory.take(&receipt.commodity, receipt.amount);
-                info!("Sold {:?} for {}", receipt.commodity, receipt.price);
+                if let Some(receipt) = store.sell_to_store(*commodity, amount_to_sell, None) {
+                    action_queue.queue.remove(0);
+                    inventory.take(&receipt.commodity, receipt.amount);
+                    info!("Sold {:?} for {}", receipt.commodity, receipt.price);
+                } else {
+                    info!("Failed to sell {:?}, jettisoning it into space", commodity);
+                    inventory.discard(*commodity);
+                    action_queue.queue.remove(0);
+                }
             }
         }
     }
+}
+
+struct TradeRoute {
+    store_to_buy_from: Entity,
+    store_to_buy_from_name: String,
+    store_to_sell_to: Entity,
+    store_to_sell_to_name: String,
+    commodity: Commodity,
+    cost_to_buy_commodity: Amount,
+    price_to_sell_commodity: Amount,
+}
+
+fn decide_trade_route(
+    buy_from_stores_listings: Vec<(Entity, &Planet, &Name, Vec<StoreListing>)>,
+    sell_to_stores_listings: Vec<(Entity, &Planet, &Name, Vec<StoreListing>)>,
+) -> Option<TradeRoute> {
+    let buy_listings = buy_from_stores_listings
+        .into_iter()
+        .flat_map(|(entity, planet, name, listings)| {
+            listings
+                .into_iter()
+                .map(|listing| (entity, planet, name, listing))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let sell_listings = sell_to_stores_listings
+        .into_iter()
+        .flat_map(|(entity, planet, name, listings)| {
+            listings
+                .into_iter()
+                .map(|listing| (entity, planet, name, listing))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    // info!("Buy from store listings: {:#?}", buy_listings);
+    // info!("Sell to store listings: {:#?}", sell_listings);
+    let trade_routes = vec![Food, HydrogenTanks, Fuel]
+        .into_iter()
+        .flat_map(|commodity| {
+            let cheapest_buy = buy_listings
+                .iter()
+                .filter(|(_, _, _, listing)| listing.commodity == commodity)
+                .min_by_key(|(_, _, _, listing)| listing.price);
+            let priciest_sell = sell_listings
+                .iter()
+                .filter(|(_, _, _, listing)| listing.commodity == commodity)
+                .max_by_key(|(_, _, _, listing)| listing.price);
+            // info!("trade: {:?} -> {:?}", cheapest_buy, priciest_sell);
+            match (cheapest_buy, priciest_sell) {
+                (
+                    Some((buy_entity, _, buy_name, buy_listing)),
+                    Some((sell_entity, _, sell_name, sell_listing)),
+                ) if buy_listing.price < sell_listing.price => Some(TradeRoute {
+                    store_to_buy_from: *buy_entity,
+                    store_to_buy_from_name: buy_name.0.clone(),
+                    store_to_sell_to: *sell_entity,
+                    store_to_sell_to_name: sell_name.0.clone(),
+                    commodity,
+                    cost_to_buy_commodity: buy_listing.price,
+                    price_to_sell_commodity: sell_listing.price,
+                }),
+                _ => None,
+            }
+        })
+        .max_by_key(|trade_route| {
+            trade_route.price_to_sell_commodity - trade_route.cost_to_buy_commodity
+        });
+    trade_routes
 }
