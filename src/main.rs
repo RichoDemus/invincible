@@ -6,6 +6,7 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::asset_loading::AssetLoadingPlugin;
 use crate::camera::CameraPlugin;
+use crate::pause::PausePlugin;
 use crate::planet::PlanetPlugin;
 use crate::ship::ShipPlugin;
 use crate::ui::UiPlugin;
@@ -14,6 +15,7 @@ use crate::unit_selection::SelectPlugin;
 mod asset_loading;
 mod camera;
 pub mod common_components;
+mod pause;
 mod planet;
 mod quicksilver;
 mod ship;
@@ -41,5 +43,6 @@ fn main() {
         .add_plugin(ShapePlugin)
         .add_plugin(UiPlugin)
         .add_plugin(SelectPlugin)
+        .add_plugin(PausePlugin)
         .run();
 }

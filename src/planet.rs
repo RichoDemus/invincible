@@ -3,6 +3,7 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
+use crate::pause::AppState;
 use crate::planet::NaturalResource::{FertileSoil, Hydrogen};
 use crate::unit_selection::Selectable;
 use crate::util::OncePerSecond;
@@ -15,8 +16,11 @@ pub struct PlanetPlugin;
 impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(planet_setup);
-        app.add_system(population_buys_food);
-        app.add_system(produce_commodities_from_natural_resources);
+        app.add_system_set(
+            SystemSet::on_update(AppState::GameRunning)
+                .with_system(population_buys_food)
+                .with_system(produce_commodities_from_natural_resources),
+        );
     }
 }
 

@@ -5,6 +5,7 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
+use crate::pause::AppState;
 use crate::planet::Planet;
 use crate::unit_selection::Selectable;
 use crate::v2::commodity::Commodity;
@@ -17,9 +18,12 @@ pub struct ShipPlugin;
 impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(ship_setup);
-        app.add_system(ship_decision_system);
-        app.add_system(move_ship_towards_objective);
-        app.add_system(trade_with_planet);
+        app.add_system_set(
+            SystemSet::on_update(AppState::GameRunning)
+                .with_system(ship_decision_system)
+                .with_system(move_ship_towards_objective)
+                .with_system(trade_with_planet),
+        );
     }
 }
 
