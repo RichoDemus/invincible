@@ -178,7 +178,7 @@ fn hydrogen_refinery_produces_fuel(
     if once_per_second.timer.tick(time.delta()).just_finished() {
         for mut store in stores.iter_mut() {
             if store.inventory.get(&HydrogenTanks) > 0 {
-                store.take(&HydrogenTanks, 1);
+                store.take(HydrogenTanks, 1);
                 store.give(Fuel, 1);
             }
         }
