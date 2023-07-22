@@ -17,7 +17,7 @@ mod camera;
 pub mod common_components;
 mod pause;
 mod planet;
-mod quicksilver;
+// mod quicksilver;
 mod ship;
 pub mod ui;
 mod unit_selection;
