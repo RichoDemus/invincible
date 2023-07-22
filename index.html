@@ -1,28 +1,27 @@
-<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" name="viewport" />
-    <script>
-        var Module = {};
-        var __cargo_web = {};
-        Object.defineProperty( Module, 'canvas', {
-            get: function() {
-                if( __cargo_web.canvas ) {
-                    return __cargo_web.canvas;
-                }
-
-                var canvas = document.createElement( 'canvas' );
-                document.querySelector( 'body' ).appendChild( canvas );
-                __cargo_web.canvas = canvas;
-
-                return canvas;
-            }
-        });
-    </script>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        background: linear-gradient(
+          135deg,
+          white 0%,
+          white 49%,
+          black 49%,
+          black 51%,
+          white 51%,
+          white 100%
+        );
+        background-repeat: repeat;
+        background-size: 20px 20px;
+      }
+      canvas {
+        background-color: white;
+      }
+    </style>
 </head>
-<body>
-    <script src="invincible.js"></script>
-</body>
+<script type="module">
+    import init from './invincible-wasm.js'
+    init()
+  </script>
 </html>
