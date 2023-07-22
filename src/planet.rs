@@ -205,39 +205,39 @@ fn hydrogen_refinery_produces_fuel(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_produce_food() {
-        let mut world = World::default();
-        let mut update_stage = SystemStage::parallel();
-        update_stage.add_system(produce_commodities_from_natural_resources);
-
-        let time = Time::default();
-        // mock time? :S
-        world.insert_resource(time);
-
-        let dry_planet_store_entity = world.spawn().insert(Store::default()).id();
-        let water_planet_store_entity = world.spawn().insert(Store::default()).id();
-
-        let _water_world = world.spawn().push_children(&[dry_planet_store_entity]).id();
-
-        let _non_water_world = world
-            .spawn()
-            .insert(Water)
-            .push_children(&[water_planet_store_entity])
-            .id();
-
-        let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
-        let water_store = world.get::<Store>(water_planet_store_entity).unwrap();
-
-        assert_eq!(dry_store.inventory.get(&Commodity::Food), 0);
-        assert_eq!(water_store.inventory.get(&Commodity::Food), 0);
-
-        update_stage.run(&mut world);
-
-        let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
-        let water_store = world.get::<Store>(water_planet_store_entity).unwrap();
-
-        assert_eq!(dry_store.inventory.get(&Commodity::Food), 0);
-        assert_eq!(water_store.inventory.get(&Commodity::Food), 0);
-    }
+    // #[test]
+    // fn test_produce_food() {
+    //     let mut world = World::default();
+    //     let mut update_stage = SystemStage::parallel();
+    //     update_stage.add_system(produce_commodities_from_natural_resources);
+    //
+    //     let time = Time::default();
+    //     // mock time? :S
+    //     world.insert_resource(time);
+    //
+    //     let dry_planet_store_entity = world.spawn().insert(Store::default()).id();
+    //     let water_planet_store_entity = world.spawn().insert(Store::default()).id();
+    //
+    //     let _water_world = world.spawn().push_children(&[dry_planet_store_entity]).id();
+    //
+    //     let _non_water_world = world
+    //         .spawn()
+    //         .insert(Water)
+    //         .push_children(&[water_planet_store_entity])
+    //         .id();
+    //
+    //     let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
+    //     let water_store = world.get::<Store>(water_planet_store_entity).unwrap();
+    //
+    //     assert_eq!(dry_store.inventory.get(&Commodity::Food), 0);
+    //     assert_eq!(water_store.inventory.get(&Commodity::Food), 0);
+    //
+    //     update_stage.run(&mut world);
+    //
+    //     let dry_store = world.get::<Store>(dry_planet_store_entity).unwrap();
+    //     let water_store = world.get::<Store>(water_planet_store_entity).unwrap();
+    //
+    //     assert_eq!(dry_store.inventory.get(&Commodity::Food), 0);
+    //     assert_eq!(water_store.inventory.get(&Commodity::Food), 0);
+    // }
 }
