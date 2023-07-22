@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use bevy_prototype_lyon::prelude::*;
+
+use bevy::prelude::*;
+use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
@@ -16,12 +18,20 @@ pub struct PlanetPlugin;
 impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(planet_setup);
-        app.add_system_set(
-            SystemSet::on_update(AppState::GameRunning)
-                .with_system(population_buys_food)
-                .with_system(produce_commodities_from_natural_resources)
-                .with_system(hydrogen_refinery_produces_fuel),
+        app.add_systems(
+            Update,
+            (
+                population_buys_food,
+                produce_commodities_from_natural_resources,
+                hydrogen_refinery_produces_fuel,
+            ),
         );
+        // app.add_system_set(
+        //     SystemSet::on_update(AppState::GameRunning)
+        //         .with_system(population_buys_food)
+        //         .with_system(produce_commodities_from_natural_resources)
+        //         .with_system(hydrogen_refinery_produces_fuel),
+        // );
     }
 }
 
@@ -83,14 +93,23 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
             center: Vec2::default(),
         };
 
-        let mut planet = commands.spawn_bundle(GeometryBuilder::build_as(
-            &shape,
-            DrawMode::Outlined {
-                fill_mode: FillMode::color(color),
-                outline_mode: StrokeMode::new(Color::WHITE, 1.0),
+        let mut planet = commands.spawn((
+            ShapeBundle {
+                path: GeometryBuilder::build_as(&shape),
+                ..Default::default()
             },
-            Transform::default(),
+            Fill::color(color),
+            Stroke::new(Color::WHITE, 1.),
         ));
+
+        // let mut planet = commands.spawn_bundle(GeometryBuilder::build_as(
+        //     &shape,
+        //     DrawMode::Outlined {
+        //         fill_mode: FillMode::color(color),
+        //         outline_mode: StrokeMode::new(Color::WHITE, 1.0),
+        //     },
+        //     Transform::default(),
+        // ));
         if hydrogen_refinery {
             planet.insert(HydrogenRefinery);
         }
@@ -104,19 +123,16 @@ fn planet_setup(mut commands: Commands, fonts: Res<Fonts>) {
             })
             .insert(Store::default())
             .with_children(|parent| {
-                parent.spawn().insert_bundle(Text2dBundle {
-                    text: Text::with_section(
+                parent.spawn(Text2dBundle {
+                    text: Text::from_section(
                         name,
                         TextStyle {
                             font: fonts.font.clone(),
                             font_size: 20.0,
                             color: Color::WHITE,
                         },
-                        TextAlignment {
-                            vertical: VerticalAlign::Center,
-                            horizontal: HorizontalAlign::Center,
-                        },
-                    ),
+                    )
+                    .with_alignment(TextAlignment::Center),
                     transform: Transform::from_xyz(0., -radius + -10., 0.),
                     ..Default::default()
                 });

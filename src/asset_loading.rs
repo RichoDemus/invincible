@@ -10,6 +10,7 @@ impl Plugin for AssetLoadingPlugin {
     }
 }
 
+#[derive(Resource)]
 pub(crate) struct Fonts {
     pub(crate) font: Handle<Font>,
 }
@@ -23,6 +24,7 @@ impl FromWorld for Fonts {
     }
 }
 
+#[derive(Resource)]
 pub(crate) struct Sprites {
     pub(crate) selection_box: Handle<Image>,
     // pub(crate) pawn: Handle<TextureAtlas>,

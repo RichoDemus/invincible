@@ -20,12 +20,20 @@ pub struct ShipPlugin;
 impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(ship_setup);
-        app.add_system_set(
-            SystemSet::on_update(AppState::GameRunning)
-                .with_system(ship_decision_system)
-                .with_system(move_ship_towards_objective)
-                .with_system(trade_with_planet),
+        app.add_systems(
+            Update,
+            (
+                ship_decision_system,
+                move_ship_towards_objective,
+                trade_with_planet,
+            ),
         );
+        // app.add_system_set(
+        //     SystemSet::on_update(AppState::GameRunning)
+        //         .with_system(ship_decision_system)
+        //         .with_system(move_ship_towards_objective)
+        //         .with_system(trade_with_planet),
+        // );
     }
 }
 
@@ -59,17 +67,17 @@ enum ShipAction {
 fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
     for (ship_name, speed, capacity) in vec![("Wayfarer", 300., 5), ("Envoy", 100., 20)] {
         commands
-            .spawn_bundle(GeometryBuilder::build_as(
-                &shapes::Circle {
-                    // todo, triangle instead of circle
-                    radius: 5.,
-                    center: Vec2::default(),
+            .spawn((
+                ShapeBundle {
+                    path: GeometryBuilder::build_as(&shapes::Circle {
+                        // todo, triangle instead of circle
+                        radius: 5.,
+                        center: Vec2::default(),
+                    }),
+                    ..Default::default()
                 },
-                DrawMode::Outlined {
-                    fill_mode: FillMode::color(Color::GOLD),
-                    outline_mode: StrokeMode::new(Color::WHITE, 1.0),
-                },
-                Transform::default(),
+                Fill::color(Color::GOLD),
+                Stroke::new(Color::WHITE, 1.),
             ))
             .insert(Ship)
             .insert(ActionQueue::default())
@@ -78,19 +86,16 @@ fn ship_setup(mut commands: Commands, fonts: Res<Fonts>) {
             .insert(Name(ship_name.to_string()))
             .insert(Inventory::with_capacity(capacity))
             .with_children(|parent| {
-                parent.spawn().insert_bundle(Text2dBundle {
-                    text: Text::with_section(
+                parent.spawn(Text2dBundle {
+                    text: Text::from_section(
                         ship_name,
                         TextStyle {
                             font: fonts.font.clone(),
                             font_size: 20.0,
                             color: Color::WHITE,
                         },
-                        TextAlignment {
-                            vertical: VerticalAlign::Center,
-                            horizontal: HorizontalAlign::Center,
-                        },
-                    ),
+                    )
+                    .with_alignment(TextAlignment::Center),
                     transform: Transform::from_xyz(0., -15., 0.),
                     ..Default::default()
                 });

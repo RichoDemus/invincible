@@ -1,5 +1,6 @@
 use bevy::ecs::query::QueryEntityError;
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use strum::IntoEnumIterator;
 
 use crate::asset_loading::Sprites;
@@ -31,19 +32,25 @@ pub(crate) struct Selectable {
 struct SelectionBox;
 
 fn click_to_select_system(
-    windows: Res<Windows>,
+    windows: Query<&Window, With<PrimaryWindow>>,
     selectables: Query<(Entity, &Transform), With<Selectable>>,
     mut write_query: Query<(Entity, &mut Selectable)>,
     selection_boxes: Query<(Entity, &SelectionBox)>,
     mouse: Res<Input<MouseButton>>,
-    camera_query: Query<&GlobalTransform, With<MainCamera>>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut commands: Commands,
     sprites: Res<Sprites>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
-        if let Some(world_pos) = get_camera_position_in_world_coordinates(&windows, &camera_query) {
+        if let Some((camera, camera_transform)) = Some(camera_query.single()) {
             let mut clicked_entity = None;
             for (entity, transform) in selectables.iter() {
+                let world_pos = camera
+                    .viewport_to_world_2d(
+                        camera_transform,
+                        windows.single().cursor_position().unwrap(),
+                    )
+                    .unwrap(); // todo less unwraps
                 if world_pos.distance(transform.translation.truncate()) < 50. {
                     clicked_entity = Some(entity);
                     break;
@@ -63,7 +70,7 @@ fn click_to_select_system(
                     if clicked_entity == entity {
                         selectable.selected = true;
                         let selection_box = commands
-                            .spawn_bundle(SpriteBundle {
+                            .spawn(SpriteBundle {
                                 texture: sprites.selection_box.clone(),
                                 sprite: Sprite {
                                     color: Color::GREEN,
@@ -86,31 +93,34 @@ fn click_to_select_system(
 
 pub(crate) fn add_selected_unit_info_panel(parent: &mut ChildBuilder, font: Handle<Font>) {
     parent
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.), Val::Px(400.0)),
-                border: Rect::all(Val::Px(2.0)),
-                flex_wrap: FlexWrap::Wrap,
-                flex_direction: FlexDirection::Row,
+                width: Val::Percent(100.),
+                height: Val::Px(400.),
+                border: UiRect::all(Val::Px(2.0)),
+                // flex_wrap: FlexWrap::Wrap,
+                // flex_direction: FlexDirection::Row,
+                // justify_content: JustifyContent::Center,
+                // align_items: AlignItems::Center,
                 ..Default::default()
             },
-            color: Color::WHITE.into(),
+            background_color: Color::WHITE.into(),
             ..Default::default()
         })
         .with_children(|parent| {
             parent
-                .spawn_bundle(TextBundle {
+                .spawn(TextBundle {
                     style: Style {
                         align_self: AlignSelf::FlexEnd,
-                        position_type: PositionType::Absolute,
-                        position: Rect {
-                            top: Val::Px(5.0),
-                            left: Val::Px(15.0),
-                            ..Default::default()
-                        },
+                        // position_type: PositionType::Absolute,
+                        // position: Rect {
+                        //     top: Val::Px(5.0),
+                        //     left: Val::Px(15.0),
+                        //     ..Default::default()
+                        // },
                         ..Default::default()
                     },
-                    text: Text::with_section(
+                    text: Text::from_section(
                         "",
                         TextStyle {
                             font,
@@ -118,7 +128,6 @@ pub(crate) fn add_selected_unit_info_panel(parent: &mut ChildBuilder, font: Hand
                             color: Color::BLACK,
                             ..Default::default()
                         },
-                        Default::default(),
                     ),
                     ..Default::default()
                 })

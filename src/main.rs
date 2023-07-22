@@ -26,16 +26,15 @@ pub mod v2;
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            title: "Invincible".to_string(),
-            width: 1920.,
-            height: 1080.,
-            vsync: false,
-            resizable: true,
-            ..Default::default()
-        })
         .insert_resource(ClearColor(Color::BLACK))
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Invincible".to_string(),
+                resolution: (1920., 1080.).into(),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugin(AssetLoadingPlugin)
         .add_plugin(ShipPlugin)
         .add_plugin(PlanetPlugin)

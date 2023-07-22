@@ -10,6 +10,10 @@ web
 ```
 cargo web start --features quicksilver/stdweb
 ```
+clippy
+```
+cargo clippy -- -W clippy::nursery -W clippy::pedantic -W clippy::cargo
+```
 
 ## build and deploy
 built automatically by github actions

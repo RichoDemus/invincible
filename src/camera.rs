@@ -15,10 +15,8 @@ impl Plugin for CameraPlugin {
 pub(crate) struct MainCamera;
 
 fn setup(mut commands: Commands) {
-    commands
-        .spawn_bundle(OrthographicCameraBundle::new_2d())
-        .insert(MainCamera);
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn(Camera2dBundle::default()).insert(MainCamera);
+    // commands.spawn_bundle(UiCameraBundle::default());
 }
 
 fn camera_system(
@@ -60,21 +58,28 @@ fn camera_zoom_system(
 
 /// a bit stupid, assumes primary monitor
 pub(crate) fn get_camera_position_in_world_coordinates(
-    windows: &Res<Windows>,
-    camera_query: &Query<&GlobalTransform, With<MainCamera>>,
+    camera_query: &Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) -> Option<Vec2> {
-    if let Some(window) = windows.get_primary() {
-        if let Some(cursor_position) = window.cursor_position() {
-            let global_transform = camera_query.single();
-            let norm = Vec3::new(
-                cursor_position.x - window.width() / 2.,
-                cursor_position.y - window.height() / 2.,
-                0.,
-            );
-
-            let pos = *global_transform * norm;
-            return Some(pos.truncate());
-        }
-    }
-    None
+    Some(Vec2::new(0., 0.))
 }
+
+// /// a bit stupid, assumes primary monitor
+// pub(crate) fn get_camera_position_in_world_coordinates(
+//     windows: &Res<Windows>,
+//     camera_query: &Query<&GlobalTransform, With<MainCamera>>,
+// ) -> Option<Vec2> {
+//     if let Some(window) = windows.get_primary() {
+//         if let Some(cursor_position) = window.cursor_position() {
+//             let global_transform = camera_query.single();
+//             let norm = Vec3::new(
+//                 cursor_position.x - window.width() / 2.,
+//                 cursor_position.y - window.height() / 2.,
+//                 0.,
+//             );
+//
+//             let pos = *global_transform * norm;
+//             return Some(pos.truncate());
+//         }
+//     }
+//     None
+// }
