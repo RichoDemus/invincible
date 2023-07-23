@@ -173,83 +173,86 @@ impl Store {
 
     pub fn price_check_sell_to_store(&self) -> Vec<StoreListing> {
         Commodity::iter()
-            .into_iter()
             .filter_map(|commodity| self.price_check_sell_specific_to_store(commodity))
             .collect()
     }
 
-    fn list(&self) -> &HashMap<Commodity, Amount> {
+    #[allow(unused)]
+    const fn list(&self) -> &HashMap<Commodity, Amount> {
         &self.inventory.items
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn new_store_should_be_empty() {
-//         let store = Store::default();
-//         assert!(store.list().is_empty())
-//     }
-//
-//     #[test]
-//     fn test_give_and_take() {
-//         let mut store = Store::default();
-//         assert!(store.list().is_empty());
-//
-//         store.give(Commodity::Food, 10);
-//         let mut expected = HashMap::new();
-//         expected.insert(Commodity::Food, 10u64);
-//         assert_eq!(store.list(), &expected);
-//
-//         store.take(&Commodity::Food, 10);
-//         assert!(store.list().is_empty());
-//     }
-//
-//     #[test]
-//     fn buy_some_food() {
-//         let mut store = Store {
-//             magically_produces_food: true,
-//             ..Store::default()
-//         };
-//
-//         store.give(Commodity::Food, 100);
-//
-//         let buy_price = store
-//             .price_check_buy_specific_from_store(&Commodity::Food)
-//             .expect("Should be able to buy food");
-//         assert!(buy_price > 0);
-//
-//         let receipt = store
-//             .buy_from_store(Commodity::Food, 10, Some(buy_price))
-//             .expect("Store should've accepted this sale");
-//
-//         assert_eq!(receipt.commodity, Commodity::Food);
-//         assert_eq!(receipt.amount, 10);
-//         assert_eq!(receipt.price, buy_price);
-//     }
-//
-//     #[test]
-//     fn sell_some_food() {
-//         let mut store = Store {
-//             magically_produces_food: false,
-//             ..Store::default()
-//         };
-//
-//         store.give(Commodity::Food, 100);
-//
-//         let sell_price = store
-//             .price_check_sell_specific_to_store(&Commodity::Food)
-//             .expect("Should be able to sell food");
-//         assert!(sell_price > 0);
-//
-//         let receipt = store
-//             .sell_to_store(Commodity::Food, 10, Some(sell_price))
-//             .expect("Store should've accepted this sale");
-//
-//         assert_eq!(receipt.commodity, Commodity::Food);
-//         assert_eq!(receipt.amount, 10);
-//         assert_eq!(receipt.price, sell_price);
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_store_should_be_empty() {
+        let store = Store {
+            inventory: Inventory::default(),
+            ..default()
+        };
+        assert!(store.list().is_empty());
+    }
+
+    #[test]
+    fn test_give_and_take() {
+        let mut store = Store {
+            inventory: Inventory::default(),
+            ..default()
+        };
+        assert!(store.list().is_empty());
+
+        store.give(Commodity::Food, 10);
+        let mut expected = HashMap::new();
+        expected.insert(Commodity::Food, 10u64);
+        assert_eq!(store.list(), &expected);
+
+        store.take(Commodity::Food, 10);
+        assert!(store.list().is_empty());
+    }
+
+    #[test]
+    fn buy_some_food() {
+        let mut store = Store {
+            inventory: Inventory::default(),
+            ..default()
+        };
+
+        store.give(Commodity::Food, 100);
+
+        let store_listing = store
+            .price_check_buy_specific_from_store(Commodity::Food)
+            .expect("Should be able to buy food");
+        assert!(store_listing.price > 0);
+
+        let receipt = store
+            .buy_from_store(Commodity::Food, 10, Some(store_listing.price))
+            .expect("Store should've accepted this sale");
+
+        assert_eq!(receipt.commodity, Commodity::Food);
+        assert_eq!(receipt.amount, 10);
+        assert_eq!(receipt.price, store_listing.price);
+    }
+
+    #[test]
+    fn sell_some_food() {
+        let mut store = Store::default();
+
+        store.give(Commodity::Food, 100);
+
+        let store_listing = store
+            .price_check_sell_specific_to_store(Commodity::Food)
+            .expect("Should be able to sell food");
+        assert!(store_listing.price > 0);
+
+        let receipt = store
+            .sell_to_store(Commodity::Food, 10, Some(store_listing.price))
+            .expect("Store should've accepted this sale");
+
+        assert_eq!(receipt.commodity, Commodity::Food);
+        assert_eq!(receipt.amount, 10);
+        assert_eq!(receipt.price, store_listing.price);
+    }
+}
