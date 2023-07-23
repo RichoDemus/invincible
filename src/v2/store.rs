@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use itertools::Itertools;
 use strum::IntoEnumIterator;
 use uuid::Uuid;
 

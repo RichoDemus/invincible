@@ -1916,7 +1916,6 @@ dependencies = [
  "bevy",
  "bevy_prototype_lyon",
  "itertools",
- "lazy_static",
  "log",
  "strum",
  "strum_macros",

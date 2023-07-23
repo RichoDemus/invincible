@@ -1,10 +1,9 @@
-use bevy::ecs::query::QueryEntityError;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use strum::IntoEnumIterator;
 
 use crate::asset_loading::Sprites;
-use crate::camera::{get_camera_position_in_world_coordinates, MainCamera};
+use crate::camera::MainCamera;
 use crate::common_components::Name;
 use crate::v2::commodity::Commodity;
 use crate::v2::inventory::Inventory;
@@ -139,7 +138,7 @@ fn update_info_panel_system(
 ) {
     if let Some((_selectable, name, maybe_store, maybe_inventory)) = selected_entity_query
         .iter()
-        .find(|(selectable, name, _, _)| selectable.selected)
+        .find(|(selectable, _name, _, _)| selectable.selected)
     {
         if let Some(mut text) = info_box_query.iter_mut().next() {
             let text = text.sections.get_mut(0).unwrap();

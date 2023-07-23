@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 

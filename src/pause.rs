@@ -3,7 +3,7 @@ use bevy::prelude::*;
 pub struct PausePlugin;
 
 impl Plugin for PausePlugin {
-    fn build(&self, app: &mut App) {
+    fn build(&self, _app: &mut App) {
         // app.add_state(AppState::default());
         // app.add_system(toggle_pause_system);
     }

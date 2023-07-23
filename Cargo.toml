@@ -12,7 +12,6 @@ bevy_prototype_lyon = "0.9"
 #quicksilver = { version = "0.4.0", default-features = true, features = ["stdweb"]}
 #ncollide2d = "0.32.0"
 itertools = "0.11"
-lazy_static = "1.4.0"
 uuid = { version = "1.4", features = ["v4"] }
 log = "0.4"
 #dashmap = "5.2.0"

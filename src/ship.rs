@@ -6,12 +6,9 @@ use strum::IntoEnumIterator;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
-use crate::pause::AppState;
-use crate::planet::NaturalResource::HydrogenGasVents;
 use crate::planet::Planet;
 use crate::unit_selection::Selectable;
 use crate::v2::commodity::Commodity;
-use crate::v2::commodity::Commodity::{Food, Fuel, HydrogenTanks};
 use crate::v2::inventory::{Amount, Inventory};
 use crate::v2::store::{Store, StoreListing};
 
@@ -156,11 +153,11 @@ fn ship_decision_system(
 }
 
 fn move_ship_towards_objective(
-    mut ships: Query<(&mut Transform, &mut ActionQueue, &Engine), With<Ship>>,
+    mut ships: Query<(&mut Transform, &ActionQueue, &Engine), With<Ship>>,
     planets: Query<(Entity, &Transform), Without<Ship>>,
     time: Res<Time>,
 ) {
-    for (mut ship_transform, mut action_queue, engine) in ships.iter_mut() {
+    for (mut ship_transform, action_queue, engine) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
             continue;
         }
@@ -199,11 +196,11 @@ fn move_ship_towards_objective(
 }
 
 fn trade_with_planet(
-    mut ships: Query<(&mut Transform, &mut ActionQueue, &mut Inventory), With<Ship>>,
+    mut ships: Query<(&Transform, &mut ActionQueue, &mut Inventory), With<Ship>>,
     planets: Query<(Entity, &Transform), Without<Ship>>,
     mut stores: Query<(Entity, &mut Store), Without<Ship>>,
 ) {
-    for (mut ship_transform, mut action_queue, mut inventory) in ships.iter_mut() {
+    for (ship_transform, mut action_queue, mut inventory) in ships.iter_mut() {
         if action_queue.queue.is_empty() {
             continue;
         }

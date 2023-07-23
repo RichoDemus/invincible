@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::prelude::*;
 use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 
 use crate::asset_loading::Fonts;
@@ -181,7 +180,7 @@ fn produce_commodities_from_natural_resources(
 fn hydrogen_refinery_produces_fuel(
     time: Res<Time>,
     mut once_per_second: Local<OncePerSecond>,
-    mut stores: Query<(&mut Store), With<HydrogenRefinery>>,
+    mut stores: Query<&mut Store, With<HydrogenRefinery>>,
 ) {
     if once_per_second.timer.tick(time.delta()).just_finished() {
         for mut store in stores.iter_mut() {
