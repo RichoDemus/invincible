@@ -6,6 +6,7 @@ use strum::IntoEnumIterator;
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
+use crate::pause::AppState;
 use crate::planet::Planet;
 use crate::unit_selection::Selectable;
 use crate::v2::commodity::Commodity;
@@ -23,7 +24,8 @@ impl Plugin for ShipPlugin {
                 ship_decision_system,
                 move_ship_towards_objective,
                 trade_with_planet,
-            ),
+            )
+                .run_if(in_state(AppState::GameRunning)),
         );
     }
 }

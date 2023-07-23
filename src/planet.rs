@@ -3,6 +3,7 @@ use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
+use crate::pause::AppState;
 use crate::planet::NaturalResource::{FertileSoil, HydrogenGasVents};
 use crate::unit_selection::Selectable;
 use crate::util::OncePerSecond;
@@ -21,7 +22,8 @@ impl Plugin for PlanetPlugin {
                 population_buys_food,
                 produce_commodities_from_natural_resources,
                 hydrogen_refinery_produces_fuel,
-            ),
+            )
+                .run_if(in_state(AppState::GameRunning)),
         );
     }
 }
