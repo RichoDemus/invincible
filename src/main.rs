@@ -17,7 +17,6 @@ mod camera;
 pub mod common_components;
 mod pause;
 mod planet;
-// mod quicksilver;
 mod ship;
 pub mod ui;
 mod unit_selection;
@@ -35,13 +34,15 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugin(AssetLoadingPlugin)
-        .add_plugin(ShipPlugin)
-        .add_plugin(PlanetPlugin)
-        .add_plugin(CameraPlugin)
-        .add_plugin(ShapePlugin)
-        .add_plugin(UiPlugin)
-        .add_plugin(SelectPlugin)
-        .add_plugin(PausePlugin)
+        .add_plugins((
+            AssetLoadingPlugin,
+            ShipPlugin,
+            PlanetPlugin,
+            CameraPlugin,
+            ShapePlugin,
+            UiPlugin,
+            SelectPlugin,
+            PausePlugin,
+        ))
         .run();
 }

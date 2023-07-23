@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use uuid::Uuid;
 
 use crate::v2::commodity::Commodity;

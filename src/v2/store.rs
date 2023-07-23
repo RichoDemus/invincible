@@ -6,7 +6,6 @@ use strum::IntoEnumIterator;
 use uuid::Uuid;
 
 use crate::v2::commodity::Commodity;
-use crate::v2::commodity::Commodity::{Food, Fuel, HydrogenTanks};
 use crate::v2::inventory::Amount;
 use crate::v2::inventory::Inventory;
 

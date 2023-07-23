@@ -5,9 +5,8 @@ pub(crate) struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup);
-        app.add_system(camera_system);
-        app.add_system(camera_zoom_system);
+        app.add_systems(Startup, setup);
+        app.add_systems(Update, (camera_system, camera_zoom_system));
     }
 }
 
@@ -16,7 +15,6 @@ pub(crate) struct MainCamera;
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default()).insert(MainCamera);
-    // commands.spawn_bundle(UiCameraBundle::default());
 }
 
 fn camera_system(

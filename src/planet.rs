@@ -1,23 +1,21 @@
 use bevy::prelude::*;
-
 use bevy::prelude::*;
 use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 
 use crate::asset_loading::Fonts;
 use crate::common_components::Name;
-use crate::pause::AppState;
 use crate::planet::NaturalResource::{FertileSoil, HydrogenGasVents};
 use crate::unit_selection::Selectable;
 use crate::util::OncePerSecond;
 use crate::v2::commodity::Commodity;
 use crate::v2::commodity::Commodity::{Fuel, HydrogenTanks};
-use crate::v2::store::{Credits, Store};
+use crate::v2::store::Store;
 
 pub struct PlanetPlugin;
 
 impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(planet_setup);
+        app.add_systems(Startup, planet_setup);
         app.add_systems(
             Update,
             (
@@ -26,12 +24,6 @@ impl Plugin for PlanetPlugin {
                 hydrogen_refinery_produces_fuel,
             ),
         );
-        // app.add_system_set(
-        //     SystemSet::on_update(AppState::GameRunning)
-        //         .with_system(population_buys_food)
-        //         .with_system(produce_commodities_from_natural_resources)
-        //         .with_system(hydrogen_refinery_produces_fuel),
-        // );
     }
 }
 
@@ -203,8 +195,6 @@ fn hydrogen_refinery_produces_fuel(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // #[test]
     // fn test_produce_food() {
     //     let mut world = World::default();

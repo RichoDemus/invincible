@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::render::render_resource::Texture;
 
 pub(crate) struct AssetLoadingPlugin;
 

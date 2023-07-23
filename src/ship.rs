@@ -19,7 +19,7 @@ pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(ship_setup);
+        app.add_systems(Startup, ship_setup);
         app.add_systems(
             Update,
             (
@@ -28,12 +28,6 @@ impl Plugin for ShipPlugin {
                 trade_with_planet,
             ),
         );
-        // app.add_system_set(
-        //     SystemSet::on_update(AppState::GameRunning)
-        //         .with_system(ship_decision_system)
-        //         .with_system(move_ship_towards_objective)
-        //         .with_system(trade_with_planet),
-        // );
     }
 }
 

@@ -17,9 +17,7 @@ pub(crate) struct SelectPlugin;
 
 impl Plugin for SelectPlugin {
     fn build(&self, app: &mut App) {
-        // app.add_startup_system(load_sprite_system.system());
-        app.add_system(click_to_select_system);
-        app.add_system(update_info_panel_system);
+        app.add_systems(Update, (click_to_select_system, update_info_panel_system));
     }
 }
 
