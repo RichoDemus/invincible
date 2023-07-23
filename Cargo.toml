@@ -20,5 +20,10 @@ log = "0.4"
 strum = "0.25"
 strum_macros = "0.25"
 
-#[workspace]
-#resolver = "2" # Important! wgpu/Bevy needs this!
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
